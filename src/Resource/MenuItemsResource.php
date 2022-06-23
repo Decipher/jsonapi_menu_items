@@ -58,7 +58,7 @@ final class MenuItemsResource extends ResourceBase {
     $tree = $menu_tree->load($menu->id(), $parameters);
 
     if (empty($tree)) {
-      $response = $this->createJsonapiResponse(new ResourceObjectData([]), $request, 403, []);
+      $response = $this->createJsonapiResponse(new ResourceObjectData([]), $request, 200, []);
       $response->addCacheableDependency($cacheability);
       return $response;
     }

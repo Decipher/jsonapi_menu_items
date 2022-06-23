@@ -106,6 +106,27 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   }
 
   /**
+   * Tests the JSON:API Menu Items resource with no results.
+   */
+  public function testParametersNoResults() {
+    $this->drupalLogin($this->account);
+
+    $link_title = $this->randomMachineName();
+    $content_link = $this->createMenuLink($link_title, 'jsonapi_menu_test.user.login');
+
+    $url = Url::fromRoute('jsonapi_menu_items.menu', [
+      'menu' => 'jsonapi-menu-items-test',
+      'filter' => [
+        'parent' => "fake-item",
+      ],
+    ]);
+    [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
+
+    self::assertCount(0, $content['data']);
+    self::assertCacheContext($headers, 'url.query_args:filter');
+  }
+
+  /**
    * Tests the JSON:API Menu Items resource with the 'parents' filter.
    */
   public function testParametersParents() {
