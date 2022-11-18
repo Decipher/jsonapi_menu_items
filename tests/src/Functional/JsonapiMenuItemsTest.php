@@ -84,7 +84,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
     ]));
-    $this->assertEqual($expected_items['data'], $content['data']);
+    $this->assertEquals($expected_items['data'], $content['data']);
 
     // Assert response is cached with appropriate cacheability metadata such
     // that re-saving the link with a new title yields the new title in a
@@ -96,7 +96,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     $match = array_filter($content['data'], function (array $item) use ($content_link) {
       return $item['id'] === 'menu_link_content:' . $content_link->uuid();
     });
-    $this->assertEqual($new_title, reset($match)['attributes']['title']);
+    $this->assertEquals($new_title, reset($match)['attributes']['title']);
 
     // Add another link and ensue cacheability metadata ensures the new item
     // appears in a subsequent request.
