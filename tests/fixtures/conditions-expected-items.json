@@ -18,7 +18,7 @@
         },
         "title": "Home",
         "url": "%base_pathmenu_name_test",
-        "weight": "-10"
+        "weight": -10
       }
     },
     {
@@ -39,7 +39,7 @@
         },
         "title": "Login",
         "url": "%base_pathuser\/login",
-        "weight": "0"
+        "weight": 0
       }
     }
   ]

@@ -196,7 +196,7 @@ final class MenuItemsResource extends ResourceBase {
         ],
         'title' => (string) $menu_link->link->getTitle(),
         'url' => $url->getGeneratedUrl(),
-        'weight' => $menu_link->link->getWeight(),
+        'weight' => (int) $menu_link->link->getWeight(),
       ];
       $links = new LinkCollection([]);
 

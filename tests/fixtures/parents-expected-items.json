@@ -20,7 +20,7 @@
         },
         "title": "%title",
         "url": "%base_pathmenu_callback_title",
-        "weight": "0"
+        "weight": 0
       }
     },
     {
@@ -41,7 +41,7 @@
         },
         "title": "Logout",
         "url": "%base_pathuser\/logout",
-        "weight": "0"
+        "weight": 0
       }
     }
   ]
