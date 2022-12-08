@@ -107,7 +107,7 @@ final class MenuItemsResource extends ResourceBase {
    *   The Menu Tree Parameters object.
    */
   protected function applyFiltersToParams(Request $request, MenuTreeParameters $parameters) {
-    $filter = $request->query->get('filter');
+    $filter = $request->query->all('filter');
 
     if (!empty($filter['min_depth'])) {
       $parameters->setMinDepth((int) $filter['min_depth']);

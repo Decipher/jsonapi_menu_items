@@ -117,7 +117,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
       'menu' => 'jsonapi-menu-items-test',
       'filter' => [
-        'parent' => "fake-item",
+        'parents' => "fake_item",
       ],
     ]);
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
