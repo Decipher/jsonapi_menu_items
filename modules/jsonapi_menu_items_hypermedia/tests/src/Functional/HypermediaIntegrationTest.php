@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\Tests\jsonapi_menu_items\Functional;
+namespace Drupal\Tests\jsonapi_menu_items_hypermedia\Functional;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Url;
@@ -12,7 +12,7 @@ use GuzzleHttp\RequestOptions;
 /**
  * Tests JSON:API Hypermedia integration.
  *
- * @group jsonapi_menu_items
+ * @group jsonapi_menu_items_hypermedia
  * @requires jsonapi_hypermedia
  */
 final class HypermediaIntegrationTest extends BrowserTestBase {
@@ -31,12 +31,13 @@ final class HypermediaIntegrationTest extends BrowserTestBase {
   protected static $modules = [
     'jsonapi_hypermedia',
     'jsonapi_menu_items',
+    'jsonapi_menu_items_hypermedia',
   ];
 
   /**
    * Tests the `menu_items` links.
    */
-  public function testMenuItemsLinks() {
+  public function testMenuItemsLinks(): void {
     $url = Url::fromRoute('jsonapi.resource_list');
     $request_options = [];
     $request_options[RequestOptions::HEADERS]['Accept'] = 'application/vnd.api+json';

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\jsonapi_menu_items\Plugin\jsonapi_hypermedia\LinkProvider;
+namespace Drupal\jsonapi_menu_items_hypermedia\Plugin\jsonapi_hypermedia\LinkProvider;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -16,7 +16,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @JsonapiHypermediaLinkProvider(
  *   id = "jsonapi_menu_items.top_level.menu_items",
- *   deriver = "Drupal\jsonapi_menu_items\Plugin\Derivative\MenuItemsLinkProviderDeriver",
+ *   deriver = "Drupal\jsonapi_menu_items_hypermedia\Plugin\Derivative\MenuItemsLinkProviderDeriver",
  *   link_relation_type = "menu_items",
  * )
  */

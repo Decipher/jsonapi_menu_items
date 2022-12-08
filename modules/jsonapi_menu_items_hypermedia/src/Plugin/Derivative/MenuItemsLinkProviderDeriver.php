@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\jsonapi_menu_items\Plugin\Derivative;
+namespace Drupal\jsonapi_menu_items_hypermedia\Plugin\Derivative;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
 use Drupal\Core\Entity\EntityStorageInterface;

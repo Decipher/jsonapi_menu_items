@@ -4,5 +4,4 @@ type: module
 core_version_requirement: ^8.8 || ^9 || ^10
 dependencies:
   - drupal:menu_link_content
-  - jsonapi_hypermedia:jsonapi_hypermedia
   - jsonapi_resources:jsonapi_resources

@@ -1,0 +1,7 @@
+name: 'JSON:API Menu items Hypermedia'
+description: Integrates jsonapi_menu_items and jsonapi_hypermedia.
+type: module
+core_version_requirement: ^8.8 || ^9
+dependencies:
+  - jsonapi_menu_items:jsonapi_menu_items
+  - jsonapi_hypermedia:jsonapi_hypermedia

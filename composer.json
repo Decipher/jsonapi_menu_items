@@ -10,7 +10,10 @@
   "homepage": "https://www.drupal.org/project/jsonapi_menu_items",
   "minimum-stability": "dev",
   "require": {
-    "drupal/jsonapi_hypermedia": "^1.6",
+    "drupal/core": "^8.8 || ^9",
     "drupal/jsonapi_resources": "^1.0"
+  },
+  "require-dev": {
+    "drupal/jsonapi_hypermedia": "^1.6"
   }
 }
