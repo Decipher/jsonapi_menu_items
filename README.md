@@ -11,6 +11,7 @@
 - Supports `menu_link_content` and [menu_link_config](https://www.drupal.org/project/menu_link_config) menu items.
 - Supports filtering by depth, parents and custom query conditions.
 - Support for [JSON:API Hypermedia](https://www.drupal.org/project/jsonapi_hypermedia) based links in `/jsonapi` root document.
+- Support for fields added to menu links via [Menu Item Extras](https://www.drupal.org/project/menu_item_extras).
 
 
 ## Filters

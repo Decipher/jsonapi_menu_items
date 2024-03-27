@@ -4,14 +4,24 @@ namespace Drupal\jsonapi_menu_items\Resource;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\CacheableResponseInterface;
+use Drupal\Core\Cache\CacheBackendInterface;
+use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
+use Drupal\Core\Entity\EntityFieldManagerInterface;
+use Drupal\Core\Entity\EntityRepositoryInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\GeneratedUrl;
+use Drupal\Core\Menu\MenuLinkTreeInterface;
+use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\jsonapi\JsonApiResource\LinkCollection;
 use Drupal\jsonapi\JsonApiResource\ResourceObject;
 use Drupal\jsonapi\JsonApiResource\ResourceObjectData;
 use Drupal\jsonapi\ResourceResponse;
 use Drupal\jsonapi_resources\Resource\ResourceBase;
-use Drupal\Core\Menu\MenuTreeParameters;
+use Drupal\menu_link_content\Plugin\Menu\MenuLinkContent;
 use Drupal\system\MenuInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
 
@@ -20,7 +30,7 @@ use Symfony\Component\Routing\Route;
  *
  * @internal
  */
-final class MenuItemsResource extends ResourceBase {
+final class MenuItemsResource extends ResourceBase implements ContainerInjectionInterface {
 
   /**
    * A list of menu items.
@@ -28,6 +38,76 @@ final class MenuItemsResource extends ResourceBase {
    * @var array
    */
   protected $menuItems = [];
+
+  /**
+   * The menu tree.
+   *
+   * @var \Drupal\system\MenuInterface
+   */
+  private $menuLinkTree;
+
+  /**
+   * The entity type manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
+   */
+  private $entityTypeManager;
+
+  /**
+   * The entity field manager service.
+   *
+   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
+   */
+  private $entityFieldManager;
+
+  /**
+   * The cache backend.
+   *
+   * @var \Drupal\Core\Cache\CacheBackendInterface
+   */
+  private $cache;
+
+  /**
+   * The entity repository.
+   *
+   * @var \Drupal\Core\Entity\EntityRepositoryInterface
+   */
+  private $entityRepository;
+
+  /**
+   * Construct a new MenuItemsResource object.
+   *
+   * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menu_link_tree
+   *   The menu link tree service.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager service.
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
+   *   The entity field manager interface.
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache
+   *   The cache backend.
+   * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
+   *   The entity repository.
+   */
+  public function __construct(MenuLinkTreeInterface $menu_link_tree, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, CacheBackendInterface $cache, EntityRepositoryInterface $entity_repository) {
+    $this->menuLinkTree = $menu_link_tree;
+    $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
+    $this->cache = $cache;
+    $this->entityRepository = $entity_repository;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new self(
+      $container->get('menu.link_tree'),
+      $container->get('entity_type.manager'),
+      $container->get('entity_field.manager'),
+      $container->get('cache.discovery'),
+      $container->get('entity.repository')
+    );
+  }
 
   /**
    * Process the resource request.
@@ -54,12 +134,13 @@ final class MenuItemsResource extends ResourceBase {
     }
     $parameters->onlyEnabledLinks();
 
-    $menu_tree = \Drupal::menuTree();
-    $tree = $menu_tree->load($menu->id(), $parameters);
+    $tree = $this->menuLinkTree->load($menu->id(), $parameters);
 
     if (empty($tree)) {
       $response = $this->createJsonapiResponse(new ResourceObjectData([]), $request, 200, []);
-      $response->addCacheableDependency($cacheability);
+      if ($response instanceof CacheableResponseInterface) {
+        $response->addCacheableDependency($cacheability);
+      }
       return $response;
     }
 
@@ -69,13 +150,15 @@ final class MenuItemsResource extends ResourceBase {
       // Use the default sorting of menu links.
       ['callable' => 'menu.default_tree_manipulators:generateIndexAndSort'],
     ];
-    $tree = $menu_tree->transform($tree, $manipulators);
+    $tree = $this->menuLinkTree->transform($tree, $manipulators);
 
-    $this->getMenuItems($tree, $this->menuItems, $cacheability);
+    $this->getMenuItems($tree, $this->menuItems, $cacheability, $menu);
 
     $data = new ResourceObjectData($this->menuItems);
     $response = $this->createJsonapiResponse($data, $request, 200, [] /* , $pagination_links */);
-    $response->addCacheableDependency($cacheability);
+    if ($response instanceof CacheableResponseInterface) {
+      $response->addCacheableDependency($cacheability);
+    }
 
     return $response;
   }
@@ -84,14 +167,48 @@ final class MenuItemsResource extends ResourceBase {
    * {@inheritdoc}
    */
   public function getRouteResourceTypes(Route $route, string $route_name): array {
-    $resource_types = [];
+    $map_id = "route_resource_types.resource_type.$route_name";
+    $cached = $this->cache->get($map_id);
+    if ($cached) {
+      return $cached->data;
+    }
 
-    foreach (['menu_link_config', 'menu_link_content'] as $type) {
-      $resource_type = $this->resourceTypeRepository->get($type, $type);
-      if ($resource_type) {
-        $resource_types[] = $resource_type;
+    $possible_resource_types['menu_link_content'] = ['menu_link_content'];
+    // If menu_link_config is enabled, gather those menu links as well.
+    if ($this->entityTypeManager->hasDefinition('menu_link_config')) {
+      $possible_resource_types['menu_link_config'] = ['menu_link_config'];
+    }
+
+    $menu_link_content_definition = $this->entityTypeManager->getDefinition('menu_link_content');
+    $menu_link_content_bundle_entity_type = $menu_link_content_definition->get('bundle_entity_type');
+    if ($this->entityTypeManager->hasDefinition($menu_link_content_bundle_entity_type)) {
+      $bundles = $this->entityTypeManager
+        ->getStorage($menu_link_content_bundle_entity_type)
+        ->getQuery()
+        ->accessCheck(FALSE)
+        ->execute();
+      $possible_resource_types['menu_link_content'] = $bundles;
+    }
+
+    // Now that we've got a list of resource types we care about, go get the
+    // resource type for each entity type and bundle.
+    $resource_types = [];
+    foreach ($possible_resource_types as $entity_type => $bundles) {
+      foreach ($bundles as $bundle) {
+        $resource_type = $this->resourceTypeRepository->get($entity_type, $bundle);
+        if (!is_null($resource_type)) {
+          $resource_types[] = $resource_type;
+        }
       }
     }
+
+    $this->cache->set($map_id, $resource_types, CacheBackendInterface::CACHE_PERMANENT, [
+      'jsonapi_resource_types',
+      'entity_field_info',
+      'entity_bundles',
+      'entity_types',
+    ]);
+
     return $resource_types;
   }
 
@@ -142,14 +259,18 @@ final class MenuItemsResource extends ResourceBase {
   /**
    * Generate the menu items.
    *
-   * @param array $tree
+   * @param \Drupal\Core\Menu\MenuLinkTreeElement[] $tree
    *   The menu tree.
    * @param array $items
    *   The already created items.
    * @param \Drupal\Core\Cache\CacheableMetadata $cache
    *   The cacheable metadata.
+   * @param \Drupal\system\MenuInterface $menu
+   *   The menu that the links belong to.
    */
-  protected function getMenuItems(array $tree, array &$items, CacheableMetadata $cache) {
+  protected function getMenuItems(array $tree, array &$items, CacheableMetadata $cache, MenuInterface $menu) {
+    $menu_link_content_storage = $this->entityTypeManager->getStorage('menu_link_content');
+
     foreach ($tree as $menu_link) {
       if ($menu_link->access !== NULL && !$menu_link->access instanceof AccessResultInterface) {
         throw new \DomainException('MenuLinkTreeElement::access must be either NULL or an AccessResultInterface object.');
@@ -163,18 +284,17 @@ final class MenuItemsResource extends ResourceBase {
       if ($menu_link->access instanceof AccessResultInterface && !$menu_link->access->isAllowed()) {
         continue;
       }
+
       $id = $menu_link->link->getPluginId();
-      [$plugin] = explode(':', $id);
-
-      switch ($plugin) {
-        case 'menu_link_content':
-        case 'menu_link_config':
-          $resource_type = $this->resourceTypeRepository->get($plugin, $plugin);
-          break;
-
-        default:
-          // @todo Use a custom resource type?
+      [$plugin] = explode(':', $id, 2);
+      if ($plugin === 'menu_link_config') {
+        $resource_type = $this->resourceTypeRepository->get('menu_link_config', 'menu_link_config');
+      }
+      else {
+        $resource_type = $this->resourceTypeRepository->get('menu_link_content', $menu_link->link->getMenuName());
+        if ($resource_type === NULL) {
           $resource_type = $this->resourceTypeRepository->get('menu_link_content', 'menu_link_content');
+        }
       }
 
       $url = $menu_link->link->getUrlObject()->toString(TRUE);
@@ -198,6 +318,28 @@ final class MenuItemsResource extends ResourceBase {
         'url' => $url->getGeneratedUrl(),
         'weight' => (int) $menu_link->link->getWeight(),
       ];
+
+      if ($menu_link->link instanceof MenuLinkContent) {
+        // @todo once minimum supported Drupal core version is 10.2, use
+        //   \Drupal\menu_link_content\Plugin\Menu\MenuLinkContent::getEntity.
+        // $link = $menu_link->link->getEntity();
+        $entity_id = $menu_link->link->getMetaData()['entity_id'] ?? NULL;
+        if ($entity_id !== NULL) {
+          $link = $menu_link_content_storage->load($entity_id);
+          if ($link !== NULL) {
+            $link = $this->entityRepository->getTranslationFromContext($link);
+
+            $field_definitions = $this->entityFieldManager->getFieldDefinitions($link->getEntityTypeId(), $link->bundle());
+            foreach ($field_definitions as $field_name => $field_definition) {
+              if ($field_definition instanceof BaseFieldDefinition && $field_definition->getProvider() === 'menu_link_content') {
+                continue;
+              }
+              $fields[$field_name] = $link->{$field_name};
+            }
+          }
+        }
+      }
+
       $links = new LinkCollection([]);
 
       $resource_object_cacheability = new CacheableMetadata();
@@ -206,7 +348,7 @@ final class MenuItemsResource extends ResourceBase {
       $items[$id] = new ResourceObject($resource_object_cacheability, $resource_type, $id, NULL, $fields, $links);
 
       if ($menu_link->subtree) {
-        $this->getMenuItems($menu_link->subtree, $items, $cache);
+        $this->getMenuItems($menu_link->subtree, $items, $cache, $menu);
       }
     }
   }
