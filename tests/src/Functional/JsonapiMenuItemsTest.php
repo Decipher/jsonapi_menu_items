@@ -3,6 +3,7 @@
 namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\DeprecationHelper;
 use Drupal\Core\Url;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\Tests\BrowserTestBase;
@@ -75,7 +76,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     // There are 5 items in this menu - 4 from
     // jsonapi_menu_items_test.links.menu.yml and the content item created
     // above. One of the four in that file is disabled and should be filtered
-    // out, another is not accesible to the current users. This leaves a total
+    // out, another is not accessible to the current users. This leaves a total
     // of 3 items in the response.
     $this->assertCount(3, $content['data']);
 
@@ -112,7 +113,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     $this->drupalLogin($this->account);
 
     $link_title = $this->randomMachineName();
-    $content_link = $this->createMenuLink($link_title, 'jsonapi_menu_test.user.login');
+    $this->createMenuLink($link_title, 'jsonapi_menu_test.user.login');
 
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
       'menu' => 'jsonapi-menu-items-test',
@@ -123,7 +124,11 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(0, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
+
   }
 
   /**
@@ -144,7 +149,10 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(2, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
 
     $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/parents-expected-items.json'), [
       '%uuid' => $content_link->uuid(),
@@ -152,7 +160,20 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%base_path' => Url::fromRoute('<front>')->toString(),
     ]));
 
+    $content = $this->cleanUrlForTest($content);
+
     self::assertEquals($expected_items['data'], $content['data']);
+  }
+
+  /**
+   * Clear the token from the URL.
+   */
+  public function cleanUrlForTest(array $content): array {
+    // Remove token from URL since it varies per session, using a default
+    // token value would result in test failures.
+    $content['data'] = array_map(fn (array $value) => ['attributes' => ['url' => parse_url($value['attributes']['url'] ?? '', \PHP_URL_PATH)] + $value['attributes']] + $value, $content['data']);
+
+    return $content;
   }
 
   /**
@@ -170,11 +191,16 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(1, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
 
     $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/parent-expected-items.json'), [
       '%base_path' => Url::fromRoute('<front>')->toString(),
     ]));
+
+    $content = $this->cleanUrlForTest($content);
 
     self::assertEquals($expected_items['data'], $content['data']);
   }
@@ -197,13 +223,18 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(2, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
 
     $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/min-depth-expected-items.json'), [
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
     ]));
+
+    $content = $this->cleanUrlForTest($content);
 
     self::assertEquals($expected_items['data'], $content['data']);
 
@@ -234,7 +265,10 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(3, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
 
     $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/max-depth-expected-items.json'), [
       '%uuid' => $content_link->uuid(),
@@ -273,7 +307,10 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
 
     self::assertCount(2, $content['data']);
-    self::assertCacheContext($headers, 'url.query_args:filter');
+    DeprecationHelper::backwardsCompatibleCall(\Drupal::VERSION, '10.4',
+      fn() => self::assertCacheContext($headers, 'url.query_args'),
+      fn() => self::assertCacheContext($headers, 'url.query_args:filter')
+    );
 
     $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/conditions-expected-items.json'), [
       '%base_path' => Url::fromRoute('<front>')->toString(),
