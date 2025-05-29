@@ -268,7 +268,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    * @param \Drupal\system\MenuInterface $menu
    *   The menu that the links belong to.
    */
-  protected function getMenuItems(array $tree, array &$items, CacheableMetadata $cache, MenuInterface $menu) {
+  protected function getMenuItems(array $tree, array &$items, CacheableMetadata &$cache, MenuInterface $menu) {
     $menu_link_content_storage = $this->entityTypeManager->getStorage('menu_link_content');
 
     foreach ($tree as $menu_link) {
@@ -277,7 +277,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
       }
 
       if ($menu_link->access instanceof AccessResultInterface) {
-        $cache->merge(CacheableMetadata::createFromObject($menu_link->access));
+        $cache = $cache->merge(CacheableMetadata::createFromObject($menu_link->access));
       }
 
       // Only return accessible links.

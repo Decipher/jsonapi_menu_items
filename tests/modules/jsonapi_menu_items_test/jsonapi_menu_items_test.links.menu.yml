@@ -22,3 +22,10 @@ jsonapi_menu_test.user.logout.disabled:
   route_name: user.logout
   enabled: 0
   parent: jsonapi_menu_test.open
+
+# To test access cacheability.
+jsonapi_menu_test2.user.access:
+  title: 'Logout'
+  menu_name: jsonapi-menu-items-test2
+  description: 'Logout.'
+  route_name: user.logout

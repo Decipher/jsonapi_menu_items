@@ -58,8 +58,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
    */
   protected function assertCacheContext(array $headers, $expected_cache_context) {
     $cache_contexts = explode(' ', $headers['X-Drupal-Cache-Contexts'][0]);
-    $this
-      ->assertTrue(in_array($expected_cache_context, $cache_contexts), "'" . $expected_cache_context . "' is present in the X-Drupal-Cache-Contexts header.");
+    $this->assertContains($expected_cache_context, $cache_contexts, "'$expected_cache_context' is present in the X-Drupal-Cache-Contexts header.");
   }
 
   /**
@@ -317,6 +316,26 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     ]));
 
     self::assertEquals($expected_items['data'], $content['data']);
+  }
+
+  /**
+   * Tests the JSON:API Menu Items resource.
+   */
+  public function testJsonapiMenuItemsResourceCacheabilltyBubbling() {
+    $url = Url::fromRoute('jsonapi_menu_items.menu', [
+      'menu' => 'jsonapi-menu-items-test2',
+    ]);
+    [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
+    // There are 0 items in this menu because the anonymous user does not have
+    // access to logout.
+    $this->assertCount(0, $content['data']);
+    $this->assertCacheContext($headers, 'user.roles:authenticated');
+
+    $this->drupalLogin($this->account);
+    [$content, $headers] = $this->getJsonApiMenuItemsResponse($url);
+    // There is 1 item in this menu because a user does have access to logout.
+    $this->assertCount(1, $content['data']);
+    $this->assertCacheContext($headers, 'user.roles:authenticated');
   }
 
   /**
