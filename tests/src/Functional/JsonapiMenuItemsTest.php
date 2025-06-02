@@ -83,6 +83,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
+      '%langcode' => 'en',
     ]));
     $this->assertEquals($expected_items['data'], $content['data']);
 
@@ -157,6 +158,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
+      '%langcode' => 'en',
     ]));
 
     $content = $this->cleanUrlForTest($content);
@@ -231,6 +233,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
+      '%langcode' => 'en',
     ]));
 
     $content = $this->cleanUrlForTest($content);
@@ -273,6 +276,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
+      '%langcode' => 'en',
     ]));
 
     self::assertEquals($expected_items['data'], $content['data']);

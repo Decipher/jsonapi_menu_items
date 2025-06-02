@@ -286,6 +286,7 @@ final class MenuItemsResourceTest extends KernelTestBase {
           'title' => 'Llama Gabilondo',
           'url' => 'https://nl.wikipedia.org/wiki/Llama',
           'weight' => 0,
+          'langcode' => 'en',
           'test_field' => 'foo bar baz',
           'view_mode' => 'default',
         ],

@@ -58,3 +58,14 @@ variables:
 composer (next major):
   variables:
     _LENIENT_ALLOW_LIST: 'jsonapi_hypermedia, menu_item_extras'
+
+eslint:
+  allow_failure: false
+phpcs:
+  allow_failure: false
+phpstan:
+  allow_failure: false
+phpstan (next major):
+  allow_failure: true
+stylelint:
+  allow_failure: false

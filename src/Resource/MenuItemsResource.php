@@ -319,6 +319,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
         'weight' => (int) $menu_link->link->getWeight(),
       ];
 
+      $language = NULL;
       if ($menu_link->link instanceof MenuLinkContent) {
         // @todo once minimum supported Drupal core version is 10.2, use
         //   \Drupal\menu_link_content\Plugin\Menu\MenuLinkContent::getEntity.
@@ -328,10 +329,12 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
           $link = $menu_link_content_storage->load($entity_id);
           if ($link !== NULL) {
             $link = $this->entityRepository->getTranslationFromContext($link);
+            $language = $link->language();
 
+            $langcode_key = $link->getEntityType()->getKey('langcode');
             $field_definitions = $this->entityFieldManager->getFieldDefinitions($link->getEntityTypeId(), $link->bundle());
             foreach ($field_definitions as $field_name => $field_definition) {
-              if ($field_definition instanceof BaseFieldDefinition && $field_definition->getProvider() === 'menu_link_content') {
+              if ($field_definition instanceof BaseFieldDefinition && $field_name !== $langcode_key && $field_definition->getProvider() === 'menu_link_content') {
                 continue;
               }
               $fields[$field_name] = $link->{$field_name};
@@ -345,7 +348,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
       $resource_object_cacheability = new CacheableMetadata();
       $resource_object_cacheability->addCacheableDependency($menu_link->access);
       $resource_object_cacheability->addCacheableDependency($cache);
-      $items[$id] = new ResourceObject($resource_object_cacheability, $resource_type, $id, NULL, $fields, $links);
+      $items[$id] = new ResourceObject($resource_object_cacheability, $resource_type, $id, NULL, $fields, $links, $language);
 
       if ($menu_link->subtree) {
         $this->getMenuItems($menu_link->subtree, $items, $cache, $menu);
