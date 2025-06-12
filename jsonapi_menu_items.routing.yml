@@ -1,2 +1,10 @@
-route_callbacks:
-  - '\Drupal\jsonapi_menu_items\Routing\Routes::routes'
+jsonapi_menu_items.menu:
+  path: '/%jsonapi%/menu_items/{menu}'
+  defaults:
+    _jsonapi_resource: '\Drupal\jsonapi_menu_items\Resource\MenuItemsResource'
+  options:
+    parameters:
+      menu:
+        type: entity:menu
+  requirements:
+    _access: 'TRUE'
