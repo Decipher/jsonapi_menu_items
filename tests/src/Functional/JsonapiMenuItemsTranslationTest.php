@@ -3,6 +3,7 @@
 namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
 use Drupal\Component\Serialization\Json;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -20,10 +21,8 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
 
   /**
    * The account to use for authentication.
-   *
-   * @var null|\Drupal\Core\Session\AccountInterface
    */
-  protected $account;
+  protected ?AccountInterface $account;
 
   /**
    * {@inheritdoc}
@@ -83,7 +82,7 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
    * @param string $expected_cache_context
    *   The expected cache context.
    */
-  protected function assertCacheContext(array $headers, $expected_cache_context): void {
+  protected function assertCacheContext(array $headers, string $expected_cache_context): void {
     $cache_contexts = explode(' ', $headers['X-Drupal-Cache-Contexts'][0]);
     $this->assertContains($expected_cache_context, $cache_contexts, "'$expected_cache_context' is present in the X-Drupal-Cache-Contexts header.");
   }
@@ -96,7 +95,7 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
    * @param string $expected_cache_tag
    *   The expected cache tag.
    */
-  protected function assertCacheTag(array $headers, $expected_cache_tag): void {
+  protected function assertCacheTag(array $headers, string $expected_cache_tag): void {
     $cache_tags = explode(' ', $headers['X-Drupal-Cache-Tags'][0]);
     $this->assertContains($expected_cache_tag, $cache_tags, "'$expected_cache_tag' is present in the X-Drupal-Cache-Tags header.");
   }
@@ -214,7 +213,7 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
     $menu_data = $content_es['data'];
     $menu_links = [];
     foreach ($menu_data as $item) {
-      if (strpos($item['id'], 'menu_link_content:') === 0) {
+      if (str_starts_with($item['id'], 'menu_link_content:')) {
         $uuid = str_replace('menu_link_content:', '', $item['id']);
         $menu_links[$uuid] = $item;
       }

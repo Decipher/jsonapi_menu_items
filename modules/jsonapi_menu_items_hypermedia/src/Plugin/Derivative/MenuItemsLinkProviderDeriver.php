@@ -14,10 +14,8 @@ class MenuItemsLinkProviderDeriver extends DeriverBase implements ContainerDeriv
 
   /**
    * The menu storage.
-   *
-   * @var \Drupal\Core\Entity\EntityStorageInterface
    */
-  protected $menuStorage;
+  protected EntityStorageInterface $menuStorage;
 
   /**
    * Constructs new MenuItemsLinkProvider.

@@ -37,42 +37,32 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    *
    * @var array
    */
-  protected $menuItems = [];
+  protected array $menuItems = [];
 
   /**
    * The menu tree.
-   *
-   * @var \Drupal\system\MenuInterface
    */
-  private $menuLinkTree;
+  private MenuLinkTreeInterface $menuLinkTree;
 
   /**
    * The entity type manager service.
-   *
-   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  private $entityTypeManager;
+  private EntityTypeManagerInterface $entityTypeManager;
 
   /**
    * The entity field manager service.
-   *
-   * @var \Drupal\Core\Entity\EntityFieldManagerInterface
    */
-  private $entityFieldManager;
+  private EntityFieldManagerInterface $entityFieldManager;
 
   /**
    * The cache backend.
-   *
-   * @var \Drupal\Core\Cache\CacheBackendInterface
    */
-  private $cache;
+  private CacheBackendInterface $cache;
 
   /**
    * The entity repository.
-   *
-   * @var \Drupal\Core\Entity\EntityRepositoryInterface
    */
-  private $entityRepository;
+  private EntityRepositoryInterface $entityRepository;
 
   /**
    * Construct a new MenuItemsResource object.
@@ -223,7 +213,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    * @return \Drupal\Core\Menu\MenuTreeParameters
    *   The Menu Tree Parameters object.
    */
-  protected function applyFiltersToParams(Request $request, MenuTreeParameters $parameters) {
+  protected function applyFiltersToParams(Request $request, MenuTreeParameters $parameters): MenuTreeParameters {
     $filter = $request->query->all('filter');
 
     if (!empty($filter['min_depth'])) {
@@ -268,7 +258,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    * @param \Drupal\system\MenuInterface $menu
    *   The menu that the links belong to.
    */
-  protected function getMenuItems(array $tree, array &$items, CacheableMetadata &$cache, MenuInterface $menu) {
+  protected function getMenuItems(array $tree, array &$items, CacheableMetadata &$cache, MenuInterface $menu): void {
     $menu_link_content_storage = $this->entityTypeManager->getStorage('menu_link_content');
 
     foreach ($tree as $menu_link) {

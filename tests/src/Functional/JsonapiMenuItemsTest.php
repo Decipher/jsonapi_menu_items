@@ -4,6 +4,7 @@ namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\DeprecationHelper;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\Tests\BrowserTestBase;
@@ -20,10 +21,8 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
 
   /**
    * The account to use for authentication.
-   *
-   * @var null|\Drupal\Core\Session\AccountInterface
    */
-  protected $account;
+  protected ?AccountInterface $account;
 
   /**
    * {@inheritdoc}
@@ -56,7 +55,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
    * @param string $expected_cache_context
    *   The expected cache context.
    */
-  protected function assertCacheContext(array $headers, $expected_cache_context) {
+  protected function assertCacheContext(array $headers, string $expected_cache_context): void {
     $cache_contexts = explode(' ', $headers['X-Drupal-Cache-Contexts'][0]);
     $this->assertContains($expected_cache_context, $cache_contexts, "'$expected_cache_context' is present in the X-Drupal-Cache-Contexts header.");
   }
@@ -325,7 +324,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource.
    */
-  public function testJsonapiMenuItemsResourceCacheabilltyBubbling() {
+  public function testJsonapiMenuItemsResourceCacheabilityBubbling() {
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
       'menu' => 'jsonapi-menu-items-test2',
     ]);
@@ -350,10 +349,10 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
    * @param string $parent
    *   The menu link parent id.
    *
-   * @return Drupal\menu_link_content\Entity\MenuLinkContent
+   * @return \Drupal\menu_link_content\Entity\MenuLinkContent
    *   The menu link.
    */
-  protected function createMenuLink(string $title, string $parent) {
+  protected function createMenuLink(string $title, string $parent): MenuLinkContent {
     $content_link = MenuLinkContent::create([
       'link' => ['uri' => 'route:menu_test.menu_callback_title'],
       'langcode' => 'en',
@@ -377,7 +376,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
    * @return array
    *   The response document and headers.
    */
-  protected function getJsonApiMenuItemsResponse(Url $url) {
+  protected function getJsonApiMenuItemsResponse(Url $url): array {
     $request_options = [];
     $request_options[RequestOptions::HEADERS]['Accept'] = 'application/vnd.api+json';
 
