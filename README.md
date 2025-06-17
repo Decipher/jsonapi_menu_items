@@ -12,6 +12,7 @@
 - Supports filtering by depth, parents and custom query conditions.
 - Support for [JSON:API Hypermedia](https://www.drupal.org/project/jsonapi_hypermedia) based links in `/jsonapi` root document.
 - Support for fields added to menu links via [Menu Item Extras](https://www.drupal.org/project/menu_item_extras).
+- Support for [sparse fieldsets](https://jsonapi.org/format/#fetching-sparse-fieldsets) via the `fields` query parameter. Example: `?fields[menu_link_content--menu_link_content]=title,url`
 
 
 ## Filters
