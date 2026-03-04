@@ -108,6 +108,37 @@ final class MenuItemsResourceTest extends KernelTestBase {
   }
 
   /**
+   * Tests that getRouteResourceTypes stores lightweight identifiers in cache.
+   *
+   * Ensures the cache entry holds ['entity_type', 'bundle'] arrays rather than
+   * serialized ResourceType objects, preventing large cache payloads.
+   *
+   * @covers ::getRouteResourceTypes
+   */
+  public function testGetRouteResourceTypesCacheFormat(): void {
+    Menu::create([
+      'id' => 'menu-test',
+      'label' => 'Test menu',
+      'description' => 'Description text',
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $this->getSut()->getRouteResourceTypes(new Route('/'), 'foo');
+
+    $cached = $this->container->get('cache.discovery')->get('route_resource_types.resource_type.foo');
+    self::assertNotFalse($cached);
+    self::assertIsArray($cached->data);
+    self::assertNotEmpty($cached->data);
+    foreach ($cached->data as $item) {
+      self::assertIsArray($item);
+      self::assertArrayHasKey('entity_type', $item);
+      self::assertArrayHasKey('bundle', $item);
+      self::assertIsString($item['entity_type']);
+      self::assertIsString($item['bundle']);
+    }
+  }
+
+  /**
    * Tests process.
    *
    * @dataProvider dataProcess

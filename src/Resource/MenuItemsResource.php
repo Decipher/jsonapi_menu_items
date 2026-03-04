@@ -160,7 +160,14 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     $map_id = "route_resource_types.resource_type.$route_name";
     $cached = $this->cache->get($map_id);
     if ($cached) {
-      return $cached->data;
+      // Reconstruct ResourceType objects from lightweight cached identifiers.
+      return array_filter(array_map(
+        fn($item) => $this->resourceTypeRepository->get(
+          $item['entity_type'],
+          $item['bundle']
+        ),
+        $cached->data
+      ));
     }
 
     $possible_resource_types['menu_link_content'] = ['menu_link_content'];
@@ -183,16 +190,22 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     // Now that we've got a list of resource types we care about, go get the
     // resource type for each entity type and bundle.
     $resource_types = [];
+    $cache_data = [];
     foreach ($possible_resource_types as $entity_type => $bundles) {
       foreach ($bundles as $bundle) {
         $resource_type = $this->resourceTypeRepository->get($entity_type, $bundle);
         if (!is_null($resource_type)) {
           $resource_types[] = $resource_type;
+          // Cache only identifiers, not the full object graph.
+          $cache_data[] = [
+            'entity_type' => $entity_type,
+            'bundle' => $bundle,
+          ];
         }
       }
     }
 
-    $this->cache->set($map_id, $resource_types, CacheBackendInterface::CACHE_PERMANENT, [
+    $this->cache->set($map_id, $cache_data, CacheBackendInterface::CACHE_PERMANENT, [
       'jsonapi_resource_types',
       'entity_field_info',
       'entity_bundles',

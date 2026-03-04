@@ -13,3 +13,10 @@ function jsonapi_menu_items_update_8001(): void {
     \Drupal::service('module_installer')->install(['jsonapi_menu_items_hypermedia']);
   }
 }
+
+/**
+ * Clear route resource type caches to adopt new lightweight cache format.
+ */
+function jsonapi_menu_items_update_8002(): void {
+  \Drupal::service('cache_tags.invalidator')->invalidateTags(['jsonapi_resource_types']);
+}
