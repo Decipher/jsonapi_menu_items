@@ -178,7 +178,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
 
     $menu_link_content_definition = $this->entityTypeManager->getDefinition('menu_link_content');
     $menu_link_content_bundle_entity_type = $menu_link_content_definition->get('bundle_entity_type');
-    if ($this->entityTypeManager->hasDefinition($menu_link_content_bundle_entity_type)) {
+    if ($menu_link_content_bundle_entity_type && $this->entityTypeManager->hasDefinition($menu_link_content_bundle_entity_type)) {
       $bundles = $this->entityTypeManager
         ->getStorage($menu_link_content_bundle_entity_type)
         ->getQuery()
