@@ -47,13 +47,15 @@ include:
 # Docs at https://git.drupalcode.org/project/gitlab_templates/-/blob/1.0.x/includes/include.drupalci.variables.yml
 ################
 variables:
-  _PHPUNIT_CONCURRENT: 1
   OPT_IN_TEST_PREVIOUS_MINOR: 1
   OPT_IN_TEST_NEXT_MINOR: 1
   OPT_IN_TEST_NEXT_MAJOR: 1
-  # Use PHP 8.1 for Drupal Core 9.5.x
-  CORE_PREVIOUS_PHP_MIN: 8.1
-  _CSPELL_WORDS: 'pathmenu, pathuser'
+  _CSPELL_WORDS: 'pathmenu, pathuser, fieldsets, Gabilondo'
+  # DrupalCI runs PHPUnit with process isolation, where the scaffold config's
+  # <source> section recurses through the symlinked extension. This config drops
+  # it. The flags below are PHPUnit's, so _PHPUNIT_CONCURRENT stays unset: it
+  # switches the job to core's run-tests.sh, which takes different arguments.
+  _PHPUNIT_EXTRA: '--no-coverage --configuration=phpunit.gitlab-ci.xml'
 
 composer (next major):
   variables:

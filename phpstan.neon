@@ -1,0 +1,80 @@
+##
+# Configuration file for PHPStan static code checking, see https://phpstan.org .
+#
+# Note that drupal-specific rules are automatically included by phpstan/extension-installer
+# from vendor/mglaman/phpstan-drupal/extension.neon and vendor/mglaman/phpstan-drupal/rules.neon
+# @see https://github.com/mglaman/phpstan-drupal
+#
+# Paths are declared in the `paths` key below, not passed as CLI
+# arguments.
+
+parameters:
+
+  level: 7
+
+  # Drupal core types many properties only in docblocks, so PHPStan reads a
+  # defensive runtime check as dead code. Trust the declared types less.
+  treatPhpDocTypesAsCertain: false
+
+  # PHPStan caches reflection data that embeds absolute paths into its own
+  # PHAR. The default cache directory is shared by every project on the machine,
+  # so entries left by a build that no longer exists break the next run. Keeping
+  # the cache beside this config scopes it to a single codebase.
+  tmpDir: .phpstan
+
+  paths:
+    - web/modules/custom
+    - web/themes/custom
+
+  excludePaths:
+    # DrupalCI analyses the extension without its dev dependencies, so the
+    # Rector classes this file imports cannot be resolved there. No leading
+    # `*/`: DrupalCI runs from the module's own checkout root, where the file
+    # sits at `rector.php` with no directory prefix, which `*/rector.php`
+    # would not match.
+    - '*rector.php'
+    - vendor/*
+    - node_modules/*
+    - ../*/node_modules/*
+
+  ignoreErrors:
+    -
+      # drupalCreateUser() returns User|false on Drupal 10's core stubs but
+      # UserInterface on Drupal 11's. The narrowing this module needs for
+      # Drupal 10 is redundant, but harmless, under Drupal 11.
+      messages:
+        - '#Call to static method PHPUnit\\Framework\\Assert::assertInstanceOf\(\) with .* will always evaluate to true#'
+      reportUnmatched: false
+    -
+      # Drupal 10 docblocks JsonApiResource\Data::toArray() as EntityInterface[],
+      # but it holds ResourceObject instances. Drupal 11 corrected the docblock to
+      # ResourceIdentifierInterface[], so no single param type satisfies both.
+      messages:
+        - '#Call to an undefined method Drupal\\Core\\Entity\\EntityInterface::(getTypeName|getId)\(\)#'
+      reportUnmatched: false
+    -
+      # Drupal types a plugin definition as array|PluginDefinitionInterface,
+      # but a deriver-generated definition is always an array. There is no
+      # narrower type to declare, because the interface is shared with the
+      # object-based plugin definitions.
+      messages:
+        - '#expects array, array\|Drupal\\Component\\Plugin\\Definition\\PluginDefinitionInterface given#'
+        - "#Cannot access offset '[^']+' on array\\|Drupal\\\\Component\\\\Plugin\\\\Definition\\\\PluginDefinitionInterface#"
+      reportUnmatched: false
+    -
+      # Hook implementations do not provide docblocks for parameters, so there
+      # is no way to provide this information.
+      messages:
+        - '#.* no value type specified in iterable type array#'
+        - '#.* has no return type specified#'
+        - '#.* has parameter .* with no type specified#'
+      reportUnmatched: false
+    -
+      # PHP resolves attribute classes lazily and PHPUnit 9.6 reads doc-comment
+      # metadata, so these are inert rather than broken on a Drupal 10 build.
+      # Rector writes them from the Drupal 11 set.
+      messages:
+        - '#^Attribute class PHPUnit\\Framework\\Attributes\\.+ does not exist\.$#'
+      reportUnmatched: false
+
+  reportUnmatchedIgnoredErrors: false
