@@ -14,6 +14,11 @@
     <arg value="sp"/>
     <arg name="parallel" value="75"/>
 
+    <!-- Exclude scaffold-managed infrastructure. DrupalCI passes the whole
+         extension folder on the command line, which overrides the <file>
+         paths above, so these upstream files get linted without this. -->
+    <exclude-pattern>.*\/\.devtools\/.*</exclude-pattern>
+
     <!-- Exclude front-end assets. -->
     <exclude-pattern>.*\/node_modules\/.*</exclude-pattern>
     <exclude-pattern>*\.min\.*</exclude-pattern>
