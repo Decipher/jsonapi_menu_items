@@ -23,7 +23,6 @@ use Symfony\Component\Routing\Route;
 
 /**
  * Tests MenuItemsResource.
- *
  */
 #[Group('jsonapi_menu_items')]
 #[RunTestsInSeparateProcesses]

@@ -27,6 +27,9 @@ parameters:
     - web/themes/custom
 
   excludePaths:
+    # DrupalCI analyses the extension without its dev dependencies, so the
+    # Rector classes this file imports cannot be resolved there.
+    - rector.php
     - vendor/*
     - node_modules/*
     - ../*/node_modules/*
