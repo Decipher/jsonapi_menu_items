@@ -14,8 +14,9 @@
     <php>
         <ini name="error_reporting" value="24575"/>
         <ini name="memory_limit" value="-1"/>
-        <env name="SIMPLETEST_BASE_URL" value="http://localhost:8000"/>
-        <env name="SIMPLETEST_DB" value="sqlite://localhost/drupal_test_extension.sqlite"/>
+        <!-- SIMPLETEST_BASE_URL and SIMPLETEST_DB are not set here on purpose.
+             DrupalCI exports both, and a value here replaces them, which points
+             the functional tests at a database and URL that hold no site. -->
         <env name="BROWSERTEST_OUTPUT_BASE_URL" value=""/>
         <env name="MINK_DRIVER_CLASS" value=""/>
         <env name="MINK_DRIVER_ARGS" value=""/>
