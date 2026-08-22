@@ -43,7 +43,7 @@ Submit bug reports and feature suggestions, or track changes in the
 
 ## Features
 
-- Supports user and system created menu items.
+- Supports user-created and system-created menu items.
 - Supports `menu_link_content` and
   [Menu Link Config](https://www.drupal.org/project/menu_link_config) menu items.
 - Supports filtering by depth, parents and custom query conditions.

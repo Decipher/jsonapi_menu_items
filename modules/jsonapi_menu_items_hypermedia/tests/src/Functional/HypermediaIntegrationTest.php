@@ -46,8 +46,9 @@ final class HypermediaIntegrationTest extends BrowserTestBase {
     // AccessRestrictedLink::__construct() in jsonapi_hypermedia 1.10.0 marks
     // $link_cacheability nullable by implication, which PHP 8.4 deprecates.
     // The test HTTP middleware turns that into an error. No release fixes it
-    // yet, so run this test on the versions where it is meaningful. Compare at
-    // runtime, because Rector folds a PHP_VERSION_ID check into a constant.
+    // yet: the fix is in 8.x-1.x-dev, see
+    // https://www.drupal.org/i/3526924. Compare at runtime, because Rector
+    // folds a PHP_VERSION_ID check into a constant.
     if (version_compare(PHP_VERSION, '8.4', '>=')) {
       $this->markTestSkipped('jsonapi_hypermedia 1.10.0 triggers a PHP 8.4 implicit nullable deprecation.');
     }
