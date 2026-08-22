@@ -79,14 +79,17 @@
     <testsuites>
         <testsuite name="unit">
             <directory>web/modules/custom/*/tests/src/Unit</directory>
+        <directory>web/modules/custom/*/modules/*/tests/src/Unit</directory>
             <directory>web/themes/custom/*/tests/src/Unit</directory>
         </testsuite>
         <testsuite name="kernel">
             <directory>web/modules/custom/*/tests/src/Kernel</directory>
+        <directory>web/modules/custom/*/modules/*/tests/src/Kernel</directory>
             <directory>web/themes/custom/*/tests/src/Kernel</directory>
         </testsuite>
         <testsuite name="functional">
             <directory>web/modules/custom/*/tests/src/Functional</directory>
+        <directory>web/modules/custom/*/modules/*/tests/src/Functional</directory>
             <directory>web/themes/custom/*/tests/src/Functional</directory>
         </testsuite>
 

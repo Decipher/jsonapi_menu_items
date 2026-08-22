@@ -18,6 +18,9 @@ declare(strict_types=1);
 
 use DrupalFinder\DrupalFinderComposerRuntime;
 use DrupalRector\Set\DrupalSetProvider;
+use Rector\CodingStyle\Rector\FuncCall\VersionCompareFuncCallToConstantRector;
+use Rector\DeadCode\Rector\ConstFetch\RemovePhpVersionIdCheckRector;
+use Rector\DeadCode\Rector\If_\UnwrapFutureCompatibleIfPhpVersionRector;
 use Rector\TypeDeclaration\Rector\FuncCall\AddArrayFunctionClosureParamTypeRector;
 use Rector\CodeQuality\Rector\Class_\CompleteDynamicPropertiesRector;
 use Rector\CodeQuality\Rector\ClassMethod\InlineArrayReturnAssignRector;
@@ -56,6 +59,12 @@ return RectorConfig::configure()
     // while Drupal 11 says ResourceIdentifierInterface[]. This rule writes the
     // Drupal 10 type into the closure, which then fails PHPStan on Drupal 11.
     AddArrayFunctionClosureParamTypeRector::class,
+    // The hypermedia test skips itself on the PHP versions where a dependency
+    // triggers a deprecation. This rule strips that guard on a build whose PHP
+    // already satisfies it, which would skip the test everywhere.
+    UnwrapFutureCompatibleIfPhpVersionRector::class,
+    VersionCompareFuncCallToConstantRector::class,
+    RemovePhpVersionIdCheckRector::class,
     // Specific rules to skip based on project coding standards. Rector only
     // registers `AddOverrideAttributeToOverriddenMethodsRector` on the version
     // resolved for Drupal 10 builds and warns that the entry is unused on
