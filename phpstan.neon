@@ -28,8 +28,11 @@ parameters:
 
   excludePaths:
     # DrupalCI analyses the extension without its dev dependencies, so the
-    # Rector classes this file imports cannot be resolved there.
-    - rector.php
+    # Rector classes this file imports cannot be resolved there. No leading
+    # `*/`: DrupalCI runs from the module's own checkout root, where the file
+    # sits at `rector.php` with no directory prefix, which `*/rector.php`
+    # would not match.
+    - '*rector.php'
     - vendor/*
     - node_modules/*
     - ../*/node_modules/*
