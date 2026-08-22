@@ -11,11 +11,11 @@
   "minimum-stability": "dev",
   "require": {
     "drupal/jsonapi_resources": "^1.0",
-    "drupal/core": "^9.5 || ^10 || ^11"
+    "drupal/core": "^10 || ^11"
   },
   "require-dev": {
     "drupal/jsonapi_hypermedia": "^1.6",
-    "drupal/menu_link_config":  "^1.0",
-    "drupal/menu_item_extras":  "^3.0"
+    "drupal/menu_link_config": "^1.0@alpha",
+    "drupal/menu_item_extras": "^3.0"
   }
 }

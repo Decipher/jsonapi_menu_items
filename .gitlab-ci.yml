@@ -51,9 +51,7 @@ variables:
   OPT_IN_TEST_PREVIOUS_MINOR: 1
   OPT_IN_TEST_NEXT_MINOR: 1
   OPT_IN_TEST_NEXT_MAJOR: 1
-  # Use PHP 8.1 for Drupal Core 9.5.x
-  CORE_PREVIOUS_PHP_MIN: 8.1
-  _CSPELL_WORDS: 'pathmenu, pathuser'
+  _CSPELL_WORDS: 'pathmenu, pathuser, fieldsets, Gabilondo'
 
 composer (next major):
   variables:
