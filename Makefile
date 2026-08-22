@@ -164,9 +164,17 @@ test-functional:
 # $(MAKECMDGOALS) is parsed by make itself, before it ever reaches
 # TEST_RUN_ARGS, so `make test --coverage-text` cannot work; this target is
 # the extension point instead.
+#
+# --coverage-filter is required: extension files are symlinked into
+# build/web/modules/custom/<name>/ (see AGENTS.md), and phpunit.xml's
+# <source><include> entry does not follow symlinks when it enumerates
+# files eligible for coverage, so without this flag phpunit finds zero
+# files and silently skips coverage ("Configured filter does not match
+# any files"). Pointing at the real (non-symlinked) source path works
+# around it.
 test-coverage:
 	pushd "build" >/dev/null || exit 1 && \
-	php -d pcov.directory=.. vendor/bin/phpunit --coverage-text && \
+	php -d pcov.directory=.. vendor/bin/phpunit --coverage-filter ../src --coverage-text && \
 	popd >/dev/null || exit 1
 
 # Kernel+unit only. Functional depends on a local SQLite setup that is
@@ -174,7 +182,7 @@ test-coverage:
 # reliable local coverage loop while iterating.
 test-coverage-kernel:
 	pushd "build" >/dev/null || exit 1 && \
-	php -d pcov.directory=.. vendor/bin/phpunit --testsuite unit,kernel --coverage-text && \
+	php -d pcov.directory=.. vendor/bin/phpunit --testsuite unit,kernel --coverage-filter ../src --coverage-text && \
 	popd >/dev/null || exit 1
 
 
