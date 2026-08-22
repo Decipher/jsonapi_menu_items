@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
@@ -13,9 +17,9 @@ use GuzzleHttp\RequestOptions;
 
 /**
  * Tests JSON:API Menu Items functionality with translations.
- *
- * @group jsonapi_menu_items
  */
+#[Group('jsonapi_menu_items')]
+#[RunTestsInSeparateProcesses]
 class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   use JsonApiRequestTestTrait;
 
@@ -206,6 +210,9 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
     $url_es->setOption('language', ConfigurableLanguage::load('es'));
     [$content_es, $headers_es] = $this->getJsonApiMenuItemsResponse($url_es);
 
+    // The response must vary by interface language.
+    $this->assertCacheContext($headers_es, 'languages:language_interface');
+
     // Test that the Spanish response contains:
     // - English-only link in English fallback.
     // - English+French link in English fallback.
@@ -298,7 +305,7 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   /**
    * Get a JSON:API Menu Items resource response document.
    *
-   * @param \Drupal\core\Url $url
+   * @param \Drupal\Core\Url $url
    *   The url for a JSON:API View.
    *
    * @return array

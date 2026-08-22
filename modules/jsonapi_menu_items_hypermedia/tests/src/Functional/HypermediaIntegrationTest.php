@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\jsonapi_menu_items_hypermedia\Functional;
 
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Url;
 use Drupal\Tests\BrowserTestBase;
@@ -12,9 +16,10 @@ use GuzzleHttp\RequestOptions;
 /**
  * Tests JSON:API Hypermedia integration.
  *
- * @group jsonapi_menu_items_hypermedia
  * @requires jsonapi_hypermedia
  */
+#[Group('jsonapi_menu_items_hypermedia')]
+#[RunTestsInSeparateProcesses]
 final class HypermediaIntegrationTest extends BrowserTestBase {
 
   use JsonApiRequestTestTrait;
