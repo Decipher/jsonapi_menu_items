@@ -10,6 +10,7 @@ use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\DeprecationHelper;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Url;
+use Drupal\menu_link_config\Entity\MenuLinkConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\Tests\jsonapi\Functional\JsonApiRequestTestTrait;
@@ -40,6 +41,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     'jsonapi_menu_items',
     'menu_test',
     'jsonapi_menu_items_test',
+    'menu_link_config',
     'user',
   ];
 
@@ -105,6 +107,30 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     $this->createMenuLink($link_title, 'jsonapi_menu_test.open');
     [$content] = $this->getJsonApiMenuItemsResponse($url);
     $this->assertCount(4, $content['data']);
+  }
+
+  /**
+   * Tests that a menu_link_config link is returned.
+   *
+   * See #3171186. The resource previously only had coverage for
+   * developer-defined and menu_link_content menu links.
+   */
+  public function testJsonapiMenuItemsResourceMenuLinkConfig(): void {
+    $config_link = $this->createConfigMenuLink('Llama Gabilondo', 'menu_test.menu_name_test');
+
+    $url = Url::fromRoute('jsonapi_menu_items.menu', [
+      'menu' => 'jsonapi-menu-items-test',
+    ]);
+    [$content] = $this->getJsonApiMenuItemsResponse($url);
+
+    $match = array_values(array_filter(
+      $content['data'],
+      fn(array $item): bool => $item['id'] === 'menu_link_config:' . $config_link->id()
+    ));
+    $this->assertCount(1, $match, 'The menu_link_config link is in the response.');
+    $this->assertSame('menu_link_config--menu_link_config', $match[0]['type']);
+    $this->assertSame('Llama Gabilondo', $match[0]['attributes']['title']);
+    $this->assertSame('menu_test.menu_name_test', $match[0]['attributes']['route']['name']);
   }
 
   /**
@@ -367,6 +393,33 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     $content_link->save();
 
     return $content_link;
+  }
+
+  /**
+   * Create a menu_link_config menu link.
+   *
+   * @param string $title
+   *   The menu link title.
+   * @param string $route_name
+   *   The route the link points to.
+   *
+   * @return \Drupal\menu_link_config\Entity\MenuLinkConfig
+   *   The menu link.
+   */
+  protected function createConfigMenuLink(string $title, string $route_name): MenuLinkConfig {
+    $config_link = MenuLinkConfig::create([
+      'id' => $this->randomMachineName(),
+      'title' => $title,
+      'menu_name' => 'jsonapi-menu-items-test',
+      'route_name' => $route_name,
+      'route_parameters' => [],
+      'options' => [],
+      'weight' => 0,
+      'enabled' => TRUE,
+    ]);
+    $config_link->save();
+
+    return $config_link;
   }
 
   /**

@@ -34,7 +34,7 @@ define title
 endef
 
 .PHONY: assemble build debug debug-off debug-on delete describe destroy drush help info lint lint-fix login provision reset start stop test xdebug xdebug-off xdebug-on
-.PHONY: test-unit test-kernel test-functional
+.PHONY: test-unit test-kernel test-functional test-coverage test-coverage-kernel
 
 help:
 	@echo "COMMANDS"
@@ -157,6 +157,24 @@ test-kernel:
 test-functional:
 	pushd "build" >/dev/null || exit 1 && \
 	php -d pcov.directory=.. vendor/bin/phpunit --testsuite functional $(TEST_RUN_ARGS) && \
+	popd >/dev/null || exit 1
+
+# Text coverage summary on stdout, alongside the html/cobertura reports
+# phpunit.xml already writes to .logs/coverage/phpunit/. A leading '--' in
+# $(MAKECMDGOALS) is parsed by make itself, before it ever reaches
+# TEST_RUN_ARGS, so `make test --coverage-text` cannot work; this target is
+# the extension point instead.
+test-coverage:
+	pushd "build" >/dev/null || exit 1 && \
+	php -d pcov.directory=.. vendor/bin/phpunit --coverage-text && \
+	popd >/dev/null || exit 1
+
+# Kernel+unit only. Functional depends on a local SQLite setup that is
+# flaky on this host filesystem (see wiki/gitlab.md), so this is the fast,
+# reliable local coverage loop while iterating.
+test-coverage-kernel:
+	pushd "build" >/dev/null || exit 1 && \
+	php -d pcov.directory=.. vendor/bin/phpunit --testsuite unit,kernel --coverage-text && \
 	popd >/dev/null || exit 1
 
 

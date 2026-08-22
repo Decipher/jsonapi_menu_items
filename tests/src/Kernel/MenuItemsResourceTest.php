@@ -11,10 +11,12 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\jsonapi\JsonApiResource\Data;
 use Drupal\jsonapi\JsonApiResource\JsonApiDocumentTopLevel;
+use Drupal\jsonapi\JsonApiResource\ResourceObject;
 use Drupal\jsonapi\Normalizer\Value\CacheableNormalization;
 use Drupal\jsonapi\ResourceType\ResourceType;
 use Drupal\jsonapi_menu_items\Resource\MenuItemsResource;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\menu_link_config\Entity\MenuLinkConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 use Symfony\Component\HttpFoundation\Request;
@@ -227,6 +229,87 @@ final class MenuItemsResourceTest extends KernelTestBase {
         ],
       ],
     ];
+  }
+
+  /**
+   * Tests that a menu_link_config link is returned with the right type.
+   *
+   * The functional test suite only ever created menu_link_content items
+   * (developer-defined via YAML, or content entities). This adds a real
+   * menu_link_config entity and checks it comes back too.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process
+   */
+  public function testProcessWithMenuLinkConfig(): void {
+    $this->container->get('module_installer')->install([
+      'menu_test',
+      'jsonapi_menu_items_test',
+      'menu_link_config',
+    ]);
+    MenuLinkConfig::create([
+      'id' => 'llama',
+      'title' => 'Llama Gabilondo',
+      'description' => 'Llama Gabilondo',
+      'menu_name' => 'jsonapi-menu-items-test',
+      'route_name' => 'menu_test.menu_name_test',
+      'route_parameters' => [],
+      'options' => [],
+      'weight' => 0,
+      'enabled' => TRUE,
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    $request = Request::create('/jsonapi/menu_items/jsonapi-menu-items-test');
+    $menu = Menu::load('jsonapi-menu-items-test');
+    self::assertNotNull($menu);
+
+    $response = $sut->process($request, $menu);
+    $top_level = $response->getResponseData();
+    self::assertInstanceOf(JsonApiDocumentTopLevel::class, $top_level);
+    $document_data = $top_level->getData();
+    self::assertInstanceOf(Data::class, $document_data);
+
+    $config_links = array_values(array_filter(
+      $document_data->toArray(),
+      static fn ($object): bool => $object->getId() === 'menu_link_config:llama'
+    ));
+    self::assertCount(1, $config_links, 'The menu_link_config link is in the response.');
+    $config_link = $config_links[0];
+    self::assertInstanceOf(ResourceObject::class, $config_link);
+    self::assertSame('menu_link_config--menu_link_config', $config_link->getTypeName());
+
+    $fields = $config_link->getFields();
+    self::assertSame('Llama Gabilondo', $fields['title']);
+    self::assertSame('menu_test.menu_name_test', $fields['route']['name']);
+  }
+
+  /**
+   * Tests that a second call to getRouteResourceTypes uses the cache.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
+   */
+  public function testGetRouteResourceTypesUsesCachedResults(): void {
+    Menu::create([
+      'id' => 'menu-test',
+      'label' => 'Test menu',
+      'description' => 'Description text',
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    $route = new Route('/');
+    $first = $sut->getRouteResourceTypes($route, 'foo');
+    // The cache entry from the first call is now in place. This second call
+    // takes the cached branch instead of resolving resource types again.
+    $second = $sut->getRouteResourceTypes($route, 'foo');
+
+    $to_type_names = static fn (array $types): array => array_map(
+      static fn (ResourceType $type): string => $type->getTypeName(),
+      $types
+    );
+    self::assertNotEmpty($first);
+    self::assertSame($to_type_names($first), $to_type_names($second));
   }
 
   /**
