@@ -12,6 +12,10 @@ parameters:
 
   level: 7
 
+  # Drupal core types many properties only in docblocks, so PHPStan reads a
+  # defensive runtime check as dead code. Trust the declared types less.
+  treatPhpDocTypesAsCertain: false
+
   # PHPStan caches reflection data that embeds absolute paths into its own
   # PHAR. The default cache directory is shared by every project on the machine,
   # so entries left by a build that no longer exists break the next run. Keeping
@@ -28,6 +32,15 @@ parameters:
     - ../*/node_modules/*
 
   ignoreErrors:
+    -
+      # Drupal types a plugin definition as array|PluginDefinitionInterface,
+      # but a deriver-generated definition is always an array. There is no
+      # narrower type to declare, because the interface is shared with the
+      # object-based plugin definitions.
+      messages:
+        - '#expects array, array\|Drupal\\Component\\Plugin\\Definition\\PluginDefinitionInterface given#'
+        - "#Cannot access offset '[^']+' on array\\|Drupal\\\\Component\\\\Plugin\\\\Definition\\\\PluginDefinitionInterface#"
+      reportUnmatched: false
     -
       # Hook implementations do not provide docblocks for parameters, so there
       # is no way to provide this information.
