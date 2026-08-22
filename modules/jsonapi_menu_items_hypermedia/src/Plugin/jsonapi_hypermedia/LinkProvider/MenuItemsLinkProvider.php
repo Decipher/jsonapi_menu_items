@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\jsonapi_menu_items_hypermedia\Plugin\jsonapi_hypermedia\LinkProvider;
 
 use Drupal\Core\Access\AccessResult;
@@ -25,8 +27,8 @@ final class MenuItemsLinkProvider extends LinkProviderBase implements ContainerF
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static($configuration, $plugin_id, $plugin_definition);
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): self {
+    return new self($configuration, $plugin_id, $plugin_definition);
   }
 
   /**

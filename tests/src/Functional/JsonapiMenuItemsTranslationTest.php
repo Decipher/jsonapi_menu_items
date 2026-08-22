@@ -1,9 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\user\UserInterface;
 use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -13,9 +18,9 @@ use GuzzleHttp\RequestOptions;
 
 /**
  * Tests JSON:API Menu Items functionality with translations.
- *
- * @group jsonapi_menu_items
  */
+#[Group('jsonapi_menu_items')]
+#[RunTestsInSeparateProcesses]
 class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   use JsonApiRequestTestTrait;
 
@@ -46,14 +51,17 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    // Create administrator user.
-    $this->account = $this->drupalCreateUser([
+    // Create administrator user. drupalCreateUser() is typed User|false on
+    // Drupal 10, so narrow it before it goes into the typed property.
+    $account = $this->drupalCreateUser([
       'administer languages',
       'administer content translation',
       'translate any entity',
       'create content translations',
       'administer menu',
     ]);
+    self::assertInstanceOf(UserInterface::class, $account);
+    $this->account = $account;
     $this->drupalLogin($this->account);
 
     // Add languages.
@@ -206,6 +214,9 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
     $url_es->setOption('language', ConfigurableLanguage::load('es'));
     [$content_es, $headers_es] = $this->getJsonApiMenuItemsResponse($url_es);
 
+    // The response must vary by interface language.
+    $this->assertCacheContext($headers_es, 'languages:language_interface');
+
     // Test that the Spanish response contains:
     // - English-only link in English fallback.
     // - English+French link in English fallback.
@@ -298,7 +309,7 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   /**
    * Get a JSON:API Menu Items resource response document.
    *
-   * @param \Drupal\core\Url $url
+   * @param \Drupal\Core\Url $url
    *   The url for a JSON:API View.
    *
    * @return array

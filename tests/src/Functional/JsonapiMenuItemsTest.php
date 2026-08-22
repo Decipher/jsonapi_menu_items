@@ -1,7 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Drupal\Tests\jsonapi_menu_items\Functional;
 
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Component\Serialization\Json;
 use Drupal\Component\Utility\DeprecationHelper;
 use Drupal\Core\Session\AccountInterface;
@@ -13,9 +17,9 @@ use GuzzleHttp\RequestOptions;
 
 /**
  * Tests JSON:API Menu Items functionality.
- *
- * @group jsonapi_menu_items
  */
+#[Group('jsonapi_menu_items')]
+#[RunTestsInSeparateProcesses]
 class JsonapiMenuItemsTest extends BrowserTestBase {
   use JsonApiRequestTestTrait;
 
@@ -63,7 +67,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource.
    */
-  public function testJsonapiMenuItemsResource() {
+  public function testJsonapiMenuItemsResource(): void {
     $link_title = $this->randomMachineName();
     $content_link = $this->createMenuLink($link_title, 'jsonapi_menu_test.open');
 
@@ -78,24 +82,22 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
     // of 3 items in the response.
     $this->assertCount(3, $content['data']);
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/expected-items.json'), [
+    $expected_items = $this->loadFixture('expected-items.json', [
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
       '%langcode' => 'en',
-    ]));
+    ]);
     $this->assertEquals($expected_items['data'], $content['data']);
 
     // Assert response is cached with appropriate cacheability metadata such
     // that re-saving the link with a new title yields the new title in a
     // subsequent request.
     $new_title = $this->randomMachineName();
-    $content_link->title = $new_title;
+    $content_link->set('title', $new_title);
     $content_link->save();
     [$content] = $this->getJsonApiMenuItemsResponse($url);
-    $match = array_filter($content['data'], function (array $item) use ($content_link) {
-      return $item['id'] === 'menu_link_content:' . $content_link->uuid();
-    });
+    $match = array_filter($content['data'], fn(array $item): bool => $item['id'] === 'menu_link_content:' . $content_link->uuid());
     $this->assertEquals($new_title, reset($match)['attributes']['title']);
 
     // Add another link and ensue cacheability metadata ensures the new item
@@ -108,7 +110,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with no results.
    */
-  public function testParametersNoResults() {
+  public function testParametersNoResults(): void {
     $this->drupalLogin($this->account);
 
     $link_title = $this->randomMachineName();
@@ -133,7 +135,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with the 'parents' filter.
    */
-  public function testParametersParents() {
+  public function testParametersParents(): void {
     $this->drupalLogin($this->account);
 
     $link_title = $this->randomMachineName();
@@ -153,12 +155,12 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       fn() => self::assertCacheContext($headers, 'url.query_args:filter')
     );
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/parents-expected-items.json'), [
+    $expected_items = $this->loadFixture('parents-expected-items.json', [
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
       '%langcode' => 'en',
-    ]));
+    ]);
 
     $content = $this->cleanUrlForTest($content);
 
@@ -171,7 +173,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   public function cleanUrlForTest(array $content): array {
     // Remove token from URL since it varies per session, using a default
     // token value would result in test failures.
-    $content['data'] = array_map(fn (array $value) => ['attributes' => ['url' => parse_url($value['attributes']['url'] ?? '', \PHP_URL_PATH)] + $value['attributes']] + $value, $content['data']);
+    $content['data'] = array_map(fn (array $value): array => ['attributes' => ['url' => parse_url($value['attributes']['url'] ?? '', \PHP_URL_PATH)] + $value['attributes']] + $value, $content['data']);
 
     return $content;
   }
@@ -179,7 +181,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with the 'parent' filter.
    */
-  public function testParametersParent() {
+  public function testParametersParent(): void {
     $this->drupalLogin($this->account);
 
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
@@ -196,9 +198,9 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       fn() => self::assertCacheContext($headers, 'url.query_args:filter')
     );
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/parent-expected-items.json'), [
+    $expected_items = $this->loadFixture('parent-expected-items.json', [
       '%base_path' => Url::fromRoute('<front>')->toString(),
-    ]));
+    ]);
 
     $content = $this->cleanUrlForTest($content);
 
@@ -208,7 +210,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with the 'min_depth' filter.
    */
-  public function testParametersMinDepth() {
+  public function testParametersMinDepth(): void {
     $this->drupalLogin($this->account);
 
     $link_title = $this->randomMachineName();
@@ -228,12 +230,12 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       fn() => self::assertCacheContext($headers, 'url.query_args:filter')
     );
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/min-depth-expected-items.json'), [
+    $expected_items = $this->loadFixture('min-depth-expected-items.json', [
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
       '%langcode' => 'en',
-    ]));
+    ]);
 
     $content = $this->cleanUrlForTest($content);
 
@@ -253,7 +255,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with the 'max_depth' filter.
    */
-  public function testParametersMaxDepth() {
+  public function testParametersMaxDepth(): void {
     $link_title = $this->randomMachineName();
     $content_link = $this->createMenuLink($link_title, 'jsonapi_menu_test.open');
 
@@ -271,12 +273,12 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       fn() => self::assertCacheContext($headers, 'url.query_args:filter')
     );
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/max-depth-expected-items.json'), [
+    $expected_items = $this->loadFixture('max-depth-expected-items.json', [
       '%uuid' => $content_link->uuid(),
       '%title' => $link_title,
       '%base_path' => Url::fromRoute('<front>')->toString(),
       '%langcode' => 'en',
-    ]));
+    ]);
 
     self::assertEquals($expected_items['data'], $content['data']);
 
@@ -294,7 +296,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource with the 'conditions' filter.
    */
-  public function testParametersConditions() {
+  public function testParametersConditions(): void {
     // ?filter[conditions][provider][value]=jsonapi_menu_items_test.
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
       'menu' => 'jsonapi-menu-items-test',
@@ -314,9 +316,9 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
       fn() => self::assertCacheContext($headers, 'url.query_args:filter')
     );
 
-    $expected_items = Json::decode(strtr(file_get_contents(dirname(__DIR__, 2) . '/fixtures/conditions-expected-items.json'), [
+    $expected_items = $this->loadFixture('conditions-expected-items.json', [
       '%base_path' => Url::fromRoute('<front>')->toString(),
-    ]));
+    ]);
 
     self::assertEquals($expected_items['data'], $content['data']);
   }
@@ -324,7 +326,7 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   /**
    * Tests the JSON:API Menu Items resource.
    */
-  public function testJsonapiMenuItemsResourceCacheabilityBubbling() {
+  public function testJsonapiMenuItemsResourceCacheabilityBubbling(): void {
     $url = Url::fromRoute('jsonapi_menu_items.menu', [
       'menu' => 'jsonapi-menu-items-test2',
     ]);
@@ -368,9 +370,29 @@ class JsonapiMenuItemsTest extends BrowserTestBase {
   }
 
   /**
+   * Read a fixture file and put the test values into it.
+   *
+   * @param string $name
+   *   The file name of the fixture.
+   * @param array $replacements
+   *   The placeholder values to put into the fixture.
+   *
+   * @return array
+   *   The decoded fixture.
+   */
+  protected function loadFixture(string $name, array $replacements): array {
+    $path = dirname(__DIR__, 2) . '/fixtures/' . $name;
+    $contents = file_get_contents($path);
+    self::assertIsString($contents, "Unable to read the fixture at $path.");
+    $decoded = Json::decode(strtr($contents, $replacements));
+    self::assertIsArray($decoded, "The fixture at $path is not a JSON object.");
+    return $decoded;
+  }
+
+  /**
    * Get a JSON:API Menu Items resource response document.
    *
-   * @param \Drupal\core\Url $url
+   * @param \Drupal\Core\Url $url
    *   The url for a JSON:API View.
    *
    * @return array
