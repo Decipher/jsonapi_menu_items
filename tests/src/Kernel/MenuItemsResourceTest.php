@@ -7,14 +7,17 @@ namespace Drupal\Tests\jsonapi_menu_items\Kernel;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\jsonapi\JsonApiResource\Data;
 use Drupal\jsonapi\JsonApiResource\JsonApiDocumentTopLevel;
+use Drupal\jsonapi\JsonApiResource\ResourceObject;
 use Drupal\jsonapi\Normalizer\Value\CacheableNormalization;
 use Drupal\jsonapi\ResourceType\ResourceType;
 use Drupal\jsonapi_menu_items\Resource\MenuItemsResource;
 use Drupal\KernelTests\KernelTestBase;
+use Drupal\menu_link_config\Entity\MenuLinkConfig;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
 use Drupal\system\Entity\Menu;
 use Symfony\Component\HttpFoundation\Request;
@@ -225,6 +228,199 @@ final class MenuItemsResourceTest extends KernelTestBase {
             'id' => 'jsonapi_menu_test.user.login',
           ],
         ],
+      ],
+    ];
+  }
+
+  /**
+   * Tests that a menu_link_config link is returned with the right type.
+   *
+   * The functional test suite only ever created menu_link_content items
+   * (developer-defined via YAML, or content entities). This adds a real
+   * menu_link_config entity and checks it comes back too.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process
+   */
+  public function testProcessWithMenuLinkConfig(): void {
+    $this->container->get('module_installer')->install([
+      'menu_test',
+      'jsonapi_menu_items_test',
+      'menu_link_config',
+    ]);
+    MenuLinkConfig::create([
+      'id' => 'llama',
+      'title' => 'Llama Gabilondo',
+      'description' => 'Llama Gabilondo',
+      'menu_name' => 'jsonapi-menu-items-test',
+      'route_name' => 'menu_test.menu_name_test',
+      'route_parameters' => [],
+      'options' => [],
+      'weight' => 0,
+      'enabled' => TRUE,
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    $request = Request::create('/jsonapi/menu_items/jsonapi-menu-items-test');
+    $menu = Menu::load('jsonapi-menu-items-test');
+    self::assertNotNull($menu);
+
+    $response = $sut->process($request, $menu);
+    $top_level = $response->getResponseData();
+    self::assertInstanceOf(JsonApiDocumentTopLevel::class, $top_level);
+    $document_data = $top_level->getData();
+    self::assertInstanceOf(Data::class, $document_data);
+
+    $config_links = array_values(array_filter(
+      $document_data->toArray(),
+      static fn ($object): bool => $object->getId() === 'menu_link_config:llama'
+    ));
+    self::assertCount(1, $config_links, 'The menu_link_config link is in the response.');
+    $config_link = $config_links[0];
+    self::assertInstanceOf(ResourceObject::class, $config_link);
+    self::assertSame('menu_link_config--menu_link_config', $config_link->getTypeName());
+
+    $fields = $config_link->getFields();
+    self::assertSame('Llama Gabilondo', $fields['title']);
+    self::assertSame('menu_test.menu_name_test', $fields['route']['name']);
+  }
+
+  /**
+   * Tests that a second call to getRouteResourceTypes uses the cache.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
+   */
+  public function testGetRouteResourceTypesUsesCachedResults(): void {
+    Menu::create([
+      'id' => 'menu-test',
+      'label' => 'Test menu',
+      'description' => 'Description text',
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    $route = new Route('/');
+    $first = $sut->getRouteResourceTypes($route, 'foo');
+    // The cache entry from the first call is now in place. This second call
+    // takes the cached branch instead of resolving resource types again.
+    $second = $sut->getRouteResourceTypes($route, 'foo');
+
+    $to_type_names = static fn (array $types): array => array_map(
+      static fn (ResourceType $type): string => $type->getTypeName(),
+      $types
+    );
+    self::assertNotEmpty($first);
+    self::assertSame($to_type_names($first), $to_type_names($second));
+  }
+
+  /**
+   * Tests that an empty tree returns an empty, cacheable response.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process
+   */
+  public function testProcessWithEmptyTree(): void {
+    $this->container->get('module_installer')->install(['menu_test', 'jsonapi_menu_items_test']);
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    // A 'parents' value that matches no menu link makes menu.link_tree
+    // return an empty tree, taking process()'s empty-tree early return.
+    $request = Request::create('/jsonapi/menu_items/jsonapi-menu-items-test', 'GET', [
+      'filter' => ['parents' => 'not_a_real_menu_link'],
+    ]);
+    $menu = Menu::load('jsonapi-menu-items-test');
+    self::assertNotNull($menu);
+
+    $response = $sut->process($request, $menu);
+    self::assertSame(200, $response->getStatusCode());
+    $top_level = $response->getResponseData();
+    self::assertInstanceOf(JsonApiDocumentTopLevel::class, $top_level);
+    $document_data = $top_level->getData();
+    self::assertInstanceOf(Data::class, $document_data);
+    self::assertSame([], $document_data->toArray());
+    self::assertInstanceOf(CacheableResponseInterface::class, $response);
+    self::assertContains('url.query_args:filter', $response->getCacheableMetadata()->getCacheContexts());
+  }
+
+  /**
+   * Tests each filter branch of applyFiltersToParams via process().
+   *
+   * Sets up a two-level tree that does not depend on an authenticated
+   * user (unlike jsonapi_menu_test.user.logout, which requires one),
+   * so this stays independent of user/permission setup.
+   *
+   * The 'parents' filter is not covered here. It relies on the active
+   * trail, which comes from Drupal's real request stack - not the
+   * Request instance passed directly to process() - so it behaves
+   * differently in a Kernel test than in a real routed request.
+   * tests/src/Functional/JsonapiMenuItemsTest.php::testParametersParents
+   * covers it instead.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::applyFiltersToParams
+   *
+   * @dataProvider dataProcessWithFilters
+   */
+  #[DataProvider('dataProcessWithFilters')]
+  public function testProcessWithFilters(array $filter, array $expected_ids): void {
+    $this->container->get('module_installer')->install(['menu_test', 'jsonapi_menu_items_test']);
+    MenuLinkContent::create([
+      'uuid' => 'aa4ae0fb-b0d9-4fca-9e69-90cf12c93a90',
+      'id' => 'llama',
+      'title' => 'Llama Gabilondo',
+      'link' => 'https://nl.wikipedia.org/wiki/Llama',
+      'weight' => 0,
+      'menu_name' => 'jsonapi-menu-items-test',
+      // A child of the always-accessible 'open' link, giving a second
+      // depth level without needing an authenticated user.
+      'parent' => 'jsonapi_menu_test.open',
+    ])->save();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    $sut = $this->getSut();
+    $request = Request::create('/jsonapi/menu_items/jsonapi-menu-items-test', 'GET', [
+      'filter' => $filter,
+    ]);
+    $menu = Menu::load('jsonapi-menu-items-test');
+    self::assertNotNull($menu);
+
+    $response = $sut->process($request, $menu);
+    $top_level = $response->getResponseData();
+    self::assertInstanceOf(JsonApiDocumentTopLevel::class, $top_level);
+    $document_data = $top_level->getData();
+    self::assertInstanceOf(Data::class, $document_data);
+    $ids = array_map(static fn ($object): string => $object->getId(), $document_data->toArray());
+    sort($ids);
+    sort($expected_ids);
+    self::assertSame($expected_ids, $ids);
+  }
+
+  /**
+   * Data for testProcessWithFilters.
+   *
+   * @return array[]
+   *   The test cases.
+   */
+  public static function dataProcessWithFilters(): array {
+    return [
+      'min_depth 1: everything' => [
+        ['min_depth' => 1],
+        ['jsonapi_menu_test.open', 'jsonapi_menu_test.user.login', 'menu_link_content:aa4ae0fb-b0d9-4fca-9e69-90cf12c93a90'],
+      ],
+      'min_depth 2: only the child link' => [
+        ['min_depth' => 2],
+        ['menu_link_content:aa4ae0fb-b0d9-4fca-9e69-90cf12c93a90'],
+      ],
+      'max_depth 1: only the top-level links' => [
+        ['max_depth' => 1],
+        ['jsonapi_menu_test.open', 'jsonapi_menu_test.user.login'],
+      ],
+      'parent: only the child of jsonapi_menu_test.open' => [
+        ['parent' => 'jsonapi_menu_test.open'],
+        ['menu_link_content:aa4ae0fb-b0d9-4fca-9e69-90cf12c93a90'],
+      ],
+      'conditions: only links provided by jsonapi_menu_items_test' => [
+        ['conditions' => ['provider' => ['value' => 'jsonapi_menu_items_test']]],
+        ['jsonapi_menu_test.open', 'jsonapi_menu_test.user.login'],
       ],
     ];
   }
