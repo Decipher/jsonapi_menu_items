@@ -18,6 +18,7 @@ declare(strict_types=1);
 
 use DrupalFinder\DrupalFinderComposerRuntime;
 use DrupalRector\Set\DrupalSetProvider;
+use Rector\TypeDeclaration\Rector\FuncCall\AddArrayFunctionClosureParamTypeRector;
 use Rector\CodeQuality\Rector\Class_\CompleteDynamicPropertiesRector;
 use Rector\CodeQuality\Rector\ClassMethod\InlineArrayReturnAssignRector;
 use Rector\CodeQuality\Rector\Empty_\SimplifyEmptyCheckOnEmptyArrayRector;
@@ -51,6 +52,10 @@ if (!is_dir($cache_dir)) {
 
 return RectorConfig::configure()
   ->withSkip([
+    // Drupal 10 docblocks JsonApiResource\Data::toArray() as EntityInterface[]
+    // while Drupal 11 says ResourceIdentifierInterface[]. This rule writes the
+    // Drupal 10 type into the closure, which then fails PHPStan on Drupal 11.
+    AddArrayFunctionClosureParamTypeRector::class,
     // Specific rules to skip based on project coding standards. Rector only
     // registers `AddOverrideAttributeToOverriddenMethodsRector` on the version
     // resolved for Drupal 10 builds and warns that the entry is unused on

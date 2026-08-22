@@ -219,8 +219,8 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     if (!empty($filter['conditions']) && is_array($filter['conditions'])) {
       $condition_fields = array_keys($filter['conditions']);
       foreach ($condition_fields as $definition_field) {
-        $value = !empty($filter['conditions'][$definition_field]['value']) ? $filter['conditions'][$definition_field]['value'] : '';
-        $operator = !empty($filter['conditions'][$definition_field]['operator']) ? $filter['conditions'][$definition_field]['operator'] : '=';
+        $value = empty($filter['conditions'][$definition_field]['value']) ? '' : $filter['conditions'][$definition_field]['value'];
+        $operator = empty($filter['conditions'][$definition_field]['operator']) ? '=' : $filter['conditions'][$definition_field]['operator'];
         $parameters->addCondition($definition_field, $value, $operator);
       }
     }

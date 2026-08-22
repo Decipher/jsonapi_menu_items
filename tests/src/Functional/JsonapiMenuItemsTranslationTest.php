@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Component\Serialization\Json;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\user\UserInterface;
 use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\menu_link_content\Entity\MenuLinkContent;
@@ -50,14 +51,17 @@ class JsonapiMenuItemsTranslationTest extends BrowserTestBase {
   protected function setUp(): void {
     parent::setUp();
 
-    // Create administrator user.
-    $this->account = $this->drupalCreateUser([
+    // Create administrator user. drupalCreateUser() is typed User|false on
+    // Drupal 10, so narrow it before it goes into the typed property.
+    $account = $this->drupalCreateUser([
       'administer languages',
       'administer content translation',
       'translate any entity',
       'create content translations',
       'administer menu',
     ]);
+    self::assertInstanceOf(UserInterface::class, $account);
+    $this->account = $account;
     $this->drupalLogin($this->account);
 
     // Add languages.

@@ -11,7 +11,6 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\jsonapi\JsonApiResource\Data;
 use Drupal\jsonapi\JsonApiResource\JsonApiDocumentTopLevel;
-use Drupal\jsonapi\JsonApiResource\ResourceIdentifierInterface;
 use Drupal\jsonapi\Normalizer\Value\CacheableNormalization;
 use Drupal\jsonapi\ResourceType\ResourceType;
 use Drupal\jsonapi_menu_items\Resource\MenuItemsResource;
@@ -60,6 +59,8 @@ final class MenuItemsResourceTest extends KernelTestBase {
    *   The expected resource types.
    *
    * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
+   *
+   * @dataProvider dataGetRouteResourceTypes
    */
   #[DataProvider('dataGetRouteResourceTypes')]
   public function testGetRouteResourceTypes(array $extra_modules, array $expected_resource_types): void {
@@ -144,6 +145,8 @@ final class MenuItemsResourceTest extends KernelTestBase {
    * Tests process.
    *
    * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process
+   *
+   * @dataProvider dataProcess
    */
   #[DataProvider('dataProcess')]
   public function testProcess(array $extra_modules, array $expected_resource_objects): void {
@@ -172,7 +175,7 @@ final class MenuItemsResourceTest extends KernelTestBase {
     $document_data = $top_level->getData();
     self::assertInstanceOf(Data::class, $document_data);
     $resource_objects = array_map(
-      static fn (ResourceIdentifierInterface $object): array => [
+      static fn ($object): array => [
         'resource_type' => $object->getTypeName(),
         'id' => $object->getId(),
       ],
