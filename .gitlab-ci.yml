@@ -52,6 +52,9 @@ variables:
   OPT_IN_TEST_NEXT_MINOR: 1
   OPT_IN_TEST_NEXT_MAJOR: 1
   _CSPELL_WORDS: 'pathmenu, pathuser, fieldsets, Gabilondo'
+  # DrupalCI runs PHPUnit with process isolation, where the scaffold config's
+  # <source> section recurses through the symlinked extension. This config drops it.
+  _PHPUNIT_EXTRA: '--no-coverage --configuration=phpunit.gitlab-ci.xml'
 
 composer (next major):
   variables:
