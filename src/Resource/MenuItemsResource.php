@@ -308,7 +308,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
               if ($field_definition instanceof BaseFieldDefinition && $field_name !== $langcode_key && $field_definition->getProvider() === 'menu_link_content') {
                 continue;
               }
-              if (!$resource_type->hasField($field_name) || !$resource_type->isFieldEnabled($field_name)) {
+              if (!$resource_type->isFieldEnabled($field_name)) {
                 continue;
               }
               $fields[$field_name] = $link->{$field_name};
