@@ -7,6 +7,7 @@ namespace Drupal\Tests\jsonapi_menu_items\Kernel;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\jsonapi\JsonApiResource\Data;
@@ -41,6 +42,15 @@ final class MenuItemsResourceTest extends KernelTestBase {
     'menu_link_content',
     'jsonapi_menu_items',
   ];
+
+  /**
+   * {@inheritdoc}
+   */
+  public function register(ContainerBuilder $container): void {
+    parent::register($container);
+    $container->getDefinition('jsonapi.resource_type.repository')
+      ->setClass(FieldFilteringResourceTypeRepository::class);
+  }
 
   /**
    * {@inheritdoc}
@@ -231,6 +241,8 @@ final class MenuItemsResourceTest extends KernelTestBase {
 
   /**
    * Tests with menu_item_extras and fields added to the menu.
+   *
+   * Fields removed from or disabled on the resource type are left out.
    */
   public function testMenuItemExtrasFields(): void {
     $this->container->get('module_installer')->install([
@@ -239,18 +251,20 @@ final class MenuItemsResourceTest extends KernelTestBase {
       'menu_item_extras',
     ]);
     $this->container->get('entity_type.bundle.info')->clearCachedBundles();
-    FieldStorageConfig::create([
-      'field_name' => 'test_field',
-      'type' => 'string',
-      'entity_type' => 'menu_link_content',
-      'cardinality' => 1,
-    ])->save();
-    FieldConfig::create([
-      'entity_type' => 'menu_link_content',
-      'field_name' => 'test_field',
-      'bundle' => 'jsonapi-menu-items-test',
-      'label' => 'Test field',
-    ])->save();
+    foreach (['test_field', 'excluded_field', 'disabled_field'] as $field_name) {
+      FieldStorageConfig::create([
+        'field_name' => $field_name,
+        'type' => 'string',
+        'entity_type' => 'menu_link_content',
+        'cardinality' => 1,
+      ])->save();
+      FieldConfig::create([
+        'entity_type' => 'menu_link_content',
+        'field_name' => $field_name,
+        'bundle' => 'jsonapi-menu-items-test',
+        'label' => $field_name,
+      ])->save();
+    }
 
     MenuLinkContent::create([
       'uuid' => '5d0a9864-d151-4e8f-9f72-b573446ba1d6',
@@ -261,6 +275,8 @@ final class MenuItemsResourceTest extends KernelTestBase {
       'weight' => 0,
       'menu_name' => 'jsonapi-menu-items-test',
       'test_field' => 'foo bar baz',
+      'excluded_field' => 'excluded',
+      'disabled_field' => 'disabled',
       'view_mode' => 'default',
     ])->save();
     $sut = $this->getSut();
