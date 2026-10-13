@@ -73,3 +73,46 @@ phpstan (next major):
   allow_failure: true
 stylelint:
   allow_failure: false
+
+.release-gate:
+  # The gitlab_templates default PHP image has bash, curl, git and php.
+  variables:
+    GIT_DEPTH: 0
+    _RELEASE_GATE_API: 'https://git.drupalcode.org/api/v4'
+    _RELEASE_GATE_PROJECT: 'project/jsonapi_menu_items'
+
+# Fails an MR that names no work item, or whose work item that changes shipped
+# files is not in the next release of the target branch's major.
+work item:
+  extends: .release-gate
+  stage: validate
+  needs: []
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+  script:
+    - bash scripts/release-gate.sh mr
+
+# Runs on a tag after every other job has passed. A red result means: delete
+# the tag and do not create the release.
+release check:
+  extends: .release-gate
+  stage: .post
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - bash scripts/release-gate.sh tag
+
+# Runs the release gate's own tests when the gate or its tests change.
+release gate tests:
+  stage: validate
+  needs: []
+  rules:
+    - if: $CI_MERGE_REQUEST_IID
+      changes:
+        - scripts/release-gate.sh
+        - tests/release-gate/**/*
+        - package.json
+        - package-lock.json
+  script:
+    - npm ci --no-audit --no-fund
+    - npm run test-gate

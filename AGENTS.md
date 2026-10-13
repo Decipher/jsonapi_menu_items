@@ -122,7 +122,7 @@ Run each tool through its `ahoy` wrapper, never the binary directly:
 ## CI/CD Support
 
 - **GitHub Actions**: `.github/workflows/test.yml`
-- **DrupalCI**: `.gitlab-ci.yml`, run on gitlab.local and Drupal.org
+- **DrupalCI**: `.gitlab-ci.yml`, run by Drupal.org
 - **Matrix testing**: PHP 8.3-8.5, Drupal 10-11
 
 ## Important Notes
@@ -149,5 +149,7 @@ When the user asks to update this project's scaffold (e.g. "update scaffold"), f
    ```
 
 3. Invoke the `update-consumer-drupal-extension-scaffold` skill and follow its steps.
+
+Read `SCAFFOLD.md` before you start. It lists the changes this project makes to the scaffold's output, and they have to be applied again after the update.
 
 The skill directory is git-ignored - it is fetched on demand and not committed to the project.

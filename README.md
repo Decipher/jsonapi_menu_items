@@ -1,7 +1,7 @@
 # JSON:API Menu Items
 
 [![Pipeline](https://git.drupalcode.org/project/jsonapi_menu_items/badges/1.2.x/pipeline.svg)](https://git.drupalcode.org/project/jsonapi_menu_items/-/pipelines)
-[![Test](https://github.com/Decipher/jsonapi_menu_items/actions/workflows/test.yml/badge.svg?branch=1.2.x)](https://github.com/Decipher/jsonapi_menu_items/actions/workflows/test.yml?query=branch%3A1.2.x)
+[![Test](https://github.com/Decipher/jsonapi_menu_items/actions/workflows/test.yml/badge.svg)](https://github.com/Decipher/jsonapi_menu_items/actions/workflows/test.yml)
 
 It adds a [JSON:API Resource](https://www.drupal.org/project/jsonapi_resources)
 for menu items, at `/jsonapi/menu_items/{menu}`, allowing for easy consumption

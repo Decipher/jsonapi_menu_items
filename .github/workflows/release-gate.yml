@@ -1,0 +1,70 @@
+name: Release gate
+
+# Runs the same work item check as the `work item` job in .gitlab-ci.yml. It
+# reads Drupal.org's work items and milestones, so the answer matches the
+# Drupal.org and gitlab.local pipelines.
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+
+permissions:
+  contents: read
+
+jobs:
+  work-item:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # The gate diffs the PR against its merge base.
+          fetch-depth: 0
+          # Nothing later needs the token, so keep it away from the PR's code.
+          persist-credentials: false
+
+      - name: Setup PHP
+        # The gate reads the API's JSON with php -r.
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: 8.4
+
+      - name: Check the PR names a work item
+        # The title and body go through env, never into the script text.
+        env:
+          CI_MERGE_REQUEST_TITLE: ${{ github.event.pull_request.title }}
+          CI_MERGE_REQUEST_DESCRIPTION: ${{ github.event.pull_request.body }}
+          CI_MERGE_REQUEST_TARGET_BRANCH_NAME: ${{ github.base_ref }}
+          CI_MERGE_REQUEST_SOURCE_BRANCH_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          _RELEASE_GATE_API: 'https://git.drupalcode.org/api/v4'
+          _RELEASE_GATE_PROJECT: 'project/jsonapi_menu_items'
+        run: |
+          CI_MERGE_REQUEST_DIFF_BASE_SHA="$(git merge-base "$BASE_SHA" "$CI_MERGE_REQUEST_SOURCE_BRANCH_SHA")"
+          export CI_MERGE_REQUEST_DIFF_BASE_SHA
+          bash scripts/release-gate.sh mr
+
+  tests:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP
+        # The gate reads the API's JSON with php -r.
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: 8.4
+
+      - name: Run the release gate tests
+        run: |
+          npm ci --no-audit --no-fund
+          npm run test-gate
