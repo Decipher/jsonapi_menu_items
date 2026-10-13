@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+##
+# Fake curl for the release gate tests. Answers from files in $FIXTURES:
+#   issues/<id>                     -> issue-<id>.json, issue-<id>.status
+#   issues?milestone=Any&...&page=N -> planned-<N>.json
+#   issues?milestone=M&state=S&...  -> count-<M>-<S>.total (the X-Total header)
+# A missing file answers 404. A .status file overrides the status.
+
+set -eu
+
+out="" write="" headers=""
+while [ $# -gt 1 ]; do
+  case "$1" in
+    -o) out="$2"; shift ;;
+    -w) write="$2"; shift ;;
+    -D) headers="$2"; shift ;;
+  esac
+  shift
+done
+url="$1"
+
+case "$url" in
+  */issues/*) key="issue-${url##*/issues/}" ;;
+  *"issues?milestone=Any&"*) key="planned-${url##*page=}" ;;
+  *"issues?milestone="*)
+    query="${url#*milestone=}"
+    state="${url#*state=}"
+    key="count-${query%%&*}-${state%%&*}"
+    ;;
+  *) key="unknown" ;;
+esac
+
+status=404
+if [ -f "$FIXTURES/$key.json" ] || [ -f "$FIXTURES/$key.total" ]; then
+  status=200
+fi
+if [ -f "$FIXTURES/$key.status" ]; then
+  status="$(cat "$FIXTURES/$key.status")"
+fi
+
+if [ -n "$out" ] && [ "$out" != /dev/null ]; then
+  cat "$FIXTURES/$key.json" >"$out" 2>/dev/null || echo '{"message":"404 Not found"}' >"$out"
+fi
+if [ "$headers" = - ]; then
+  printf 'HTTP/2 %s\r\n' "$status"
+  if [ "$status" = 200 ] && [ -f "$FIXTURES/$key.total" ]; then
+    printf 'x-total: %s\r\n' "$(cat "$FIXTURES/$key.total")"
+  fi
+  printf '\r\n'
+fi
+if [ "$write" = '%{http_code}' ]; then
+  printf '%s' "$status"
+fi

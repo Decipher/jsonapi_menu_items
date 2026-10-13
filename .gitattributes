@@ -2,6 +2,7 @@
 
 AGENTS.md          export-ignore
 CLAUDE.md          export-ignore
+SCAFFOLD.md        export-ignore
 .claude            export-ignore
 .ahoy.yml          export-ignore
 .circleci          export-ignore
@@ -11,6 +12,7 @@ CLAUDE.md          export-ignore
 .gitattributes     export-ignore
 .github            export-ignore
 .gitignore         export-ignore
+.gitlab-ci.yml     export-ignore
 .skip_npm_build    export-ignore
 Makefile           export-ignore
 composer.dev.json  export-ignore
