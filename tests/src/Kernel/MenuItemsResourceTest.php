@@ -152,6 +152,35 @@ final class MenuItemsResourceTest extends KernelTestBase {
   }
 
   /**
+   * Tests that a cache entry written before update 8002 is rebuilt.
+   *
+   * Releases before 1.2.9 cached ResourceType objects. Those entries stay in
+   * the cache until jsonapi_menu_items_update_8002() runs.
+   *
+   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
+   */
+  public function testGetRouteResourceTypesRebuildsOldCacheFormat(): void {
+    $cache = $this->container->get('cache.discovery');
+    $resource_type = $this->container->get('jsonapi.resource_type.repository')
+      ->get('menu_link_content', 'menu_link_content');
+    self::assertInstanceOf(ResourceType::class, $resource_type);
+    $cache->set('route_resource_types.resource_type.foo', [$resource_type]);
+
+    $resource_types = $this->getSut()->getRouteResourceTypes(new Route('/'), 'foo');
+
+    self::assertEquals(
+      ['menu_link_content--menu_link_content'],
+      array_map(static fn (ResourceType $type) => $type->getTypeName(), $resource_types)
+    );
+    $cached = $cache->get('route_resource_types.resource_type.foo');
+    self::assertNotFalse($cached);
+    self::assertSame(
+      [['entity_type' => 'menu_link_content', 'bundle' => 'menu_link_content']],
+      $cached->data
+    );
+  }
+
+  /**
    * Tests process.
    *
    * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process

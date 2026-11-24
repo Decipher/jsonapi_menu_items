@@ -128,7 +128,9 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
   public function getRouteResourceTypes(Route $route, string $route_name): array {
     $map_id = "route_resource_types.resource_type.$route_name";
     $cached = $this->cacheBackend->get($map_id);
-    if ($cached) {
+    // Entries written before jsonapi_menu_items_update_8002() hold ResourceType
+    // objects. Rebuild those, which also overwrites them.
+    if ($cached && $this->isIdentifierList($cached->data)) {
       // Reconstruct ResourceType objects from lightweight cached identifiers.
       return array_filter(array_map(
         fn(array $item) => $this->resourceTypeRepository->get(
@@ -182,6 +184,29 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     ]);
 
     return $resource_types;
+  }
+
+  /**
+   * Checks that cached data is a list of entity type and bundle pairs.
+   *
+   * @param mixed $data
+   *   The cached data.
+   *
+   * @return bool
+   *   TRUE if every item has string 'entity_type' and 'bundle' keys.
+   *
+   * @phpstan-assert-if-true array<array{entity_type: string, bundle: string}> $data
+   */
+  private function isIdentifierList(mixed $data): bool {
+    if (!is_array($data)) {
+      return FALSE;
+    }
+    foreach ($data as $item) {
+      if (!is_array($item) || !is_string($item['entity_type'] ?? NULL) || !is_string($item['bundle'] ?? NULL)) {
+        return FALSE;
+      }
+    }
+    return TRUE;
   }
 
   /**
