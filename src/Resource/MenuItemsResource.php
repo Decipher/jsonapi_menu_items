@@ -126,11 +126,13 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    * {@inheritdoc}
    */
   public function getRouteResourceTypes(Route $route, string $route_name): array {
-    $map_id = "route_resource_types.resource_type.$route_name";
+    // 1.2.8 and earlier cached ResourceType objects under
+    // "route_resource_types.resource_type.$route_name". A new ID keeps this
+    // code from reading those entries before jsonapi_menu_items_update_8002()
+    // clears them.
+    $map_id = "route_resource_types.identifiers.$route_name";
     $cached = $this->cacheBackend->get($map_id);
-    // Entries written before jsonapi_menu_items_update_8002() hold ResourceType
-    // objects. Rebuild those, which also overwrites them.
-    if ($cached && $this->isIdentifierList($cached->data)) {
+    if ($cached) {
       // Reconstruct ResourceType objects from lightweight cached identifiers.
       return array_filter(array_map(
         fn(array $item) => $this->resourceTypeRepository->get(
@@ -184,29 +186,6 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     ]);
 
     return $resource_types;
-  }
-
-  /**
-   * Checks that cached data is a list of entity type and bundle pairs.
-   *
-   * @param mixed $data
-   *   The cached data.
-   *
-   * @return bool
-   *   TRUE if every item has string 'entity_type' and 'bundle' keys.
-   *
-   * @phpstan-assert-if-true array<array{entity_type: string, bundle: string}> $data
-   */
-  private function isIdentifierList(mixed $data): bool {
-    if (!is_array($data)) {
-      return FALSE;
-    }
-    foreach ($data as $item) {
-      if (!is_array($item) || !is_string($item['entity_type'] ?? NULL) || !is_string($item['bundle'] ?? NULL)) {
-        return FALSE;
-      }
-    }
-    return TRUE;
   }
 
   /**
