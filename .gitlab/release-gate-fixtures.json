@@ -1,0 +1,14 @@
+{
+  "work_items": {
+    "3591568": {"iid": 3591568, "state": "opened", "milestone": {"title": "1.3.0", "state": "active"}},
+    "3591565": {"iid": 3591565, "state": "opened", "milestone": {"title": "2.0.0", "state": "active"}},
+    "3554198": {"iid": 3554198, "state": "closed", "milestone": {"title": "1.2.0", "state": "closed"}},
+    "3562736": {"iid": 3562736, "state": "opened", "milestone": null}
+  },
+  "milestone": [
+    {"iid": 3591566, "state": "closed", "title": "Menu items resource 500s", "labels": ["category::bug", "code"]},
+    {"iid": 3591563, "state": "closed", "title": "Fix 11.4 hasDefinition(NULL)", "labels": ["category::bug"]},
+    {"iid": 3591567, "state": "closed", "title": "Run phpunit concurrently", "labels": ["category::task"]},
+    {"iid": 3350524, "state": "closed", "title": "Document sparse fieldsets", "labels": []}
+  ]
+}
