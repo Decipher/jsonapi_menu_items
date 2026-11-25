@@ -1,43 +1,46 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Drupal\jsonapi_menu_items_hypermedia\Plugin\Derivative;
 
 use Drupal\Component\Plugin\Derivative\DeriverBase;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Plugin\Discovery\ContainerDeriverInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides LinkProvider plugin definitions for custom menus.
- *
- * @phpstan-consistent-constructor
  */
 class MenuItemsLinkProviderDeriver extends DeriverBase implements ContainerDeriverInterface {
 
   /**
+   * The menu storage.
+   */
+  protected EntityStorageInterface $menuStorage;
+
+  /**
    * Constructs new MenuItemsLinkProvider.
    *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   The entity type manager.
+   * @param \Drupal\Core\Entity\EntityStorageInterface $menu_storage
+   *   The menu storage.
    */
-  public function __construct(protected EntityTypeManagerInterface $entityTypeManager) {
+  public function __construct(EntityStorageInterface $menu_storage) {
+    $this->menuStorage = $menu_storage;
   }
 
   /**
    * {@inheritdoc}
    */
-  public static function create(ContainerInterface $container, $base_plugin_id): static {
-    return new static($container->get('entity_type.manager'));
+  public static function create(ContainerInterface $container, $base_plugin_id) {
+    return new static($container
+      ->get('entity_type.manager')
+      ->getStorage('menu'));
   }
 
   /**
    * {@inheritdoc}
    */
   public function getDerivativeDefinitions($base_plugin_definition) {
-    $menu_storage = $this->entityTypeManager->getStorage('menu');
-    foreach ($menu_storage->loadMultiple() as $menu => $entity) {
+    foreach ($this->menuStorage->loadMultiple() as $menu => $entity) {
       $this->derivatives[$menu] = array_merge($base_plugin_definition, [
         'link_key' => "menu_items--{$menu}",
         'link_context' => [

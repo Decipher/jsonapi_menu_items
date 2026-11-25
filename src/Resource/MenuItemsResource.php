@@ -1,7 +1,5 @@
 <?php
 
-declare(strict_types=1);
-
 namespace Drupal\jsonapi_menu_items\Resource;
 
 use Drupal\Core\Access\AccessResultInterface;
@@ -13,6 +11,7 @@ use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Entity\EntityRepositoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
+use Drupal\Core\GeneratedUrl;
 use Drupal\Core\Menu\MenuLinkTreeInterface;
 use Drupal\Core\Menu\MenuTreeParameters;
 use Drupal\jsonapi\JsonApiResource\LinkCollection;
@@ -35,30 +34,62 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
 
   /**
    * A list of menu items.
+   *
+   * @var array
    */
   protected array $menuItems = [];
 
   /**
+   * The menu tree.
+   */
+  private MenuLinkTreeInterface $menuLinkTree;
+
+  /**
+   * The entity type manager service.
+   */
+  private EntityTypeManagerInterface $entityTypeManager;
+
+  /**
+   * The entity field manager service.
+   */
+  private EntityFieldManagerInterface $entityFieldManager;
+
+  /**
+   * The cache backend.
+   */
+  private CacheBackendInterface $cache;
+
+  /**
+   * The entity repository.
+   */
+  private EntityRepositoryInterface $entityRepository;
+
+  /**
    * Construct a new MenuItemsResource object.
    *
-   * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menuLinkTree
+   * @param \Drupal\Core\Menu\MenuLinkTreeInterface $menu_link_tree
    *   The menu link tree service.
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager service.
-   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entityFieldManager
+   * @param \Drupal\Core\Entity\EntityFieldManagerInterface $entity_field_manager
    *   The entity field manager interface.
-   * @param \Drupal\Core\Cache\CacheBackendInterface $cacheBackend
+   * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The cache backend.
-   * @param \Drupal\Core\Entity\EntityRepositoryInterface $entityRepository
+   * @param \Drupal\Core\Entity\EntityRepositoryInterface $entity_repository
    *   The entity repository.
    */
-  public function __construct(private readonly MenuLinkTreeInterface $menuLinkTree, private readonly EntityTypeManagerInterface $entityTypeManager, private readonly EntityFieldManagerInterface $entityFieldManager, private readonly CacheBackendInterface $cacheBackend, private readonly EntityRepositoryInterface $entityRepository) {
+  public function __construct(MenuLinkTreeInterface $menu_link_tree, EntityTypeManagerInterface $entity_type_manager, EntityFieldManagerInterface $entity_field_manager, CacheBackendInterface $cache, EntityRepositoryInterface $entity_repository) {
+    $this->menuLinkTree = $menu_link_tree;
+    $this->entityTypeManager = $entity_type_manager;
+    $this->entityFieldManager = $entity_field_manager;
+    $this->cache = $cache;
+    $this->entityRepository = $entity_repository;
   }
 
   /**
    * {@inheritDoc}
    */
-  public static function create(ContainerInterface $container): self {
+  public static function create(ContainerInterface $container) {
     return new self(
       $container->get('menu.link_tree'),
       $container->get('entity_type.manager'),
@@ -93,7 +124,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     }
     $parameters->onlyEnabledLinks();
 
-    $tree = $this->menuLinkTree->load((string) $menu->id(), $parameters);
+    $tree = $this->menuLinkTree->load($menu->id(), $parameters);
 
     if (empty($tree)) {
       $response = $this->createJsonapiResponse(new ResourceObjectData([]), $request, 200, []);
@@ -127,11 +158,11 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    */
   public function getRouteResourceTypes(Route $route, string $route_name): array {
     $map_id = "route_resource_types.resource_type.$route_name";
-    $cached = $this->cacheBackend->get($map_id);
+    $cached = $this->cache->get($map_id);
     if ($cached) {
       // Reconstruct ResourceType objects from lightweight cached identifiers.
       return array_filter(array_map(
-        fn(array $item) => $this->resourceTypeRepository->get(
+        fn($item) => $this->resourceTypeRepository->get(
           $item['entity_type'],
           $item['bundle']
         ),
@@ -174,7 +205,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
       }
     }
 
-    $this->cacheBackend->set($map_id, $cache_data, CacheBackendInterface::CACHE_PERMANENT, [
+    $this->cache->set($map_id, $cache_data, CacheBackendInterface::CACHE_PERMANENT, [
       'jsonapi_resource_types',
       'entity_field_info',
       'entity_bundles',
@@ -219,8 +250,8 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
     if (!empty($filter['conditions']) && is_array($filter['conditions'])) {
       $condition_fields = array_keys($filter['conditions']);
       foreach ($condition_fields as $definition_field) {
-        $value = empty($filter['conditions'][$definition_field]['value']) ? '' : $filter['conditions'][$definition_field]['value'];
-        $operator = empty($filter['conditions'][$definition_field]['operator']) ? '=' : $filter['conditions'][$definition_field]['operator'];
+        $value = !empty($filter['conditions'][$definition_field]['value']) ? $filter['conditions'][$definition_field]['value'] : '';
+        $operator = !empty($filter['conditions'][$definition_field]['operator']) ? $filter['conditions'][$definition_field]['operator'] : '=';
         $parameters->addCondition($definition_field, $value, $operator);
       }
     }
@@ -270,6 +301,7 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
       }
 
       $url = $menu_link->link->getUrlObject()->toString(TRUE);
+      assert($url instanceof GeneratedUrl);
       $cache->addCacheableDependency($url);
 
       $fields = [

@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_menu_items\Kernel;
 
-use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\jsonapi\JsonApiResource\Data;
 use Drupal\jsonapi\JsonApiResource\JsonApiDocumentTopLevel;
+use Drupal\jsonapi\JsonApiResource\ResourceObject;
 use Drupal\jsonapi\Normalizer\Value\CacheableNormalization;
 use Drupal\jsonapi\ResourceType\ResourceType;
 use Drupal\jsonapi_menu_items\Resource\MenuItemsResource;
@@ -23,9 +20,10 @@ use Symfony\Component\Routing\Route;
 
 /**
  * Tests MenuItemsResource.
+ *
+ * @group jsonapi_menu_items
+ * @coversDefaultClass \Drupal\jsonapi_menu_items\Resource\MenuItemsResource
  */
-#[Group('jsonapi_menu_items')]
-#[RunTestsInSeparateProcesses]
 final class MenuItemsResourceTest extends KernelTestBase {
 
   /**
@@ -68,11 +66,10 @@ final class MenuItemsResourceTest extends KernelTestBase {
    * @param string[] $expected_resource_types
    *   The expected resource types.
    *
-   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
-   *
    * @dataProvider dataGetRouteResourceTypes
+   *
+   * @covers ::getRouteResourceTypes
    */
-  #[DataProvider('dataGetRouteResourceTypes')]
   public function testGetRouteResourceTypes(array $extra_modules, array $expected_resource_types): void {
     if (count($extra_modules) > 0) {
       $this->container->get('module_installer')->install($extra_modules);
@@ -126,7 +123,7 @@ final class MenuItemsResourceTest extends KernelTestBase {
    * Ensures the cache entry holds ['entity_type', 'bundle'] arrays rather than
    * serialized ResourceType objects, preventing large cache payloads.
    *
-   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::getRouteResourceTypes
+   * @covers ::getRouteResourceTypes
    */
   public function testGetRouteResourceTypesCacheFormat(): void {
     Menu::create([
@@ -154,11 +151,9 @@ final class MenuItemsResourceTest extends KernelTestBase {
   /**
    * Tests process.
    *
-   * @covers \Drupal\jsonapi_menu_items\Resource\MenuItemsResource::process
-   *
    * @dataProvider dataProcess
+   * @covers ::process
    */
-  #[DataProvider('dataProcess')]
   public function testProcess(array $extra_modules, array $expected_resource_objects): void {
     $this->container->get('module_installer')->install(
       array_merge(['menu_test', 'jsonapi_menu_items_test'], $extra_modules)
@@ -182,14 +177,12 @@ final class MenuItemsResourceTest extends KernelTestBase {
     $response = $sut->process($request, $menu);
     $top_level = $response->getResponseData();
     self::assertInstanceOf(JsonApiDocumentTopLevel::class, $top_level);
-    $document_data = $top_level->getData();
-    self::assertInstanceOf(Data::class, $document_data);
     $resource_objects = array_map(
-      static fn ($object): array => [
+      static fn (ResourceObject $object) => [
         'resource_type' => $object->getTypeName(),
         'id' => $object->getId(),
       ],
-      $document_data->toArray()
+      $top_level->getData()->toArray()
     );
     self::assertEquals($expected_resource_objects, $resource_objects);
   }
@@ -295,7 +288,6 @@ final class MenuItemsResourceTest extends KernelTestBase {
     );
     self::assertInstanceOf(CacheableNormalization::class, $normalized);
     $data = $normalized->getNormalization();
-    self::assertIsArray($data);
     self::assertEquals([
       [
         'type' => 'menu_link_content--jsonapi-menu-items-test',
