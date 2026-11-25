@@ -24,7 +24,6 @@ parameters:
 
   paths:
     - web/modules/custom
-    - web/themes/custom
 
   excludePaths:
     # DrupalCI analyses the extension without its dev dependencies, so the
@@ -62,8 +61,8 @@ parameters:
         - "#Cannot access offset '[^']+' on array\\|Drupal\\\\Component\\\\Plugin\\\\Definition\\\\PluginDefinitionInterface#"
       reportUnmatched: false
     -
-      # Hook implementations do not provide docblocks for parameters, so there
-      # is no way to provide this information.
+      # Hook implementation docblocks carry only 'Implements hook_NAME().', so
+      # they declare neither iterable value types nor return types.
       messages:
         - '#.* no value type specified in iterable type array#'
         - '#.* has no return type specified#'

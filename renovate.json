@@ -1,7 +1,10 @@
 {
     "extends": ["config:recommended"],
-    "automerge": true,
+    "automerge": false,
     "rangeStrategy": "bump",
+    "lockFileMaintenance": {
+        "enabled": true
+    },
     "dependencyDashboard": true,
     "pinDigests": true,
     "branchPrefix": "deps/",
