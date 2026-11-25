@@ -76,3 +76,43 @@ phpstan (next major):
   allow_failure: true
 stylelint:
   allow_failure: false
+
+# The release gate. See .gitlab/release-gate.php. Exit code 3 is a warning.
+# The script saves its exit code and calls exit, as GitLab otherwise reports 1.
+.release-gate:
+  stage: validate
+  needs: []
+  allow_failure:
+    exit_codes: 3
+
+'work item':
+  extends: .release-gate
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+  script:
+    - EXIT_CODE=0
+    - php .gitlab/release-gate.php mr || EXIT_CODE=$?
+    - exit $EXIT_CODE
+
+'release check':
+  extends: .release-gate
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^\d+\.\d+\.\d+$/
+  variables:
+    # The check reads the history since the previous tag and the branches.
+    GIT_DEPTH: 0
+  script:
+    - git fetch --quiet --tags origin '+refs/heads/*:refs/remotes/origin/*'
+    - EXIT_CODE=0
+    - php .gitlab/release-gate.php tag || EXIT_CODE=$?
+    - exit $EXIT_CODE
+
+'release gate test':
+  stage: validate
+  needs: []
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - .gitlab/*
+  script:
+    - php .gitlab/release-gate-test.php
