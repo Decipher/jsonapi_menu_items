@@ -183,6 +183,44 @@ function release_notes(array $items): string {
 }
 
 /**
+ * Returns the highest release tag in a list of tags.
+ *
+ * A glob such as [0-9]*.[0-9]*.[0-9]* also matches 1.3.1rc1, so the tags are
+ * checked with the same pattern as release tags.
+ *
+ * @param string[] $tags
+ *   The tags, in any order.
+ *
+ * @return string
+ *   The tag, or an empty string when there is none.
+ */
+function previous_tag(array $tags): string {
+  $releases = preg_grep('/^\d+\.\d+\.\d+$/', $tags);
+  usort($releases, version_compare(...));
+  return (string) end($releases);
+}
+
+/**
+ * Runs a check and turns an API failure into a fail result.
+ *
+ * Then a failure goes through exit_code(), so RELEASE_GATE_OVERRIDE applies.
+ *
+ * @param callable(): list<array{string, string}> $run
+ *   The check.
+ *
+ * @return list<array{string, string}>
+ *   The results.
+ */
+function results(callable $run): array {
+  try {
+    return $run();
+  }
+  catch (\RuntimeException $e) {
+    return [['fail', $e->getMessage()]];
+  }
+}
+
+/**
  * Returns the exit code for a list of results.
  *
  * @param list<array{string, string}> $results
@@ -203,6 +241,9 @@ function exit_code(array $results, string $override): int {
  *
  * @return array<mixed>|null
  *   The decoded JSON, or NULL when the API answers 404.
+ *
+ * @throws \RuntimeException
+ *   When the API can't be read after three tries.
  */
 function api(string $path): ?array {
   $api = rtrim(getenv('RELEASE_GATE_API') ?: 'https://git.drupalcode.org/api/v4', '/');
@@ -222,10 +263,11 @@ function api(string $path): ?array {
     if ($status === 200 && is_array($data = json_decode((string) $body, TRUE))) {
       return $data;
     }
-    sleep($try * 2);
+    if ($try < 3) {
+      sleep($try * 2);
+    }
   }
-  echo "FAIL: could not read {$url} (HTTP {$status}). Run the job again.\n";
-  exit(1);
+  throw new \RuntimeException("Could not read {$url} (HTTP {$status}). Run the job again.");
 }
 
 /**
@@ -267,7 +309,7 @@ function run_release(): array {
     $items = array_merge($items, $batch);
   }
   $branches = array_map(fn(string $branch): string => (string) preg_replace('~^origin/~', '', $branch), git('branch', '-a', '--contains', $commit, '--format=%(refname:short)'));
-  $previous = git('describe', '--tags', '--abbrev=0', '--match', '[0-9]*.[0-9]*.[0-9]*', '--exclude', '*-*', "{$commit}^")[0] ?? '';
+  $previous = previous_tag(git('tag', '--merged', "{$commit}^"));
   $commits = [];
   if ($previous === '') {
     echo "NOTE: there is no previous tag, so no commits are checked.\n";
@@ -292,8 +334,8 @@ function run_release(): array {
  */
 function main(string $mode): int {
   $results = match ($mode) {
-    'mr' => run_work_item(),
-    'tag' => run_release(),
+    'mr' => results(run_work_item(...)),
+    'tag' => results(run_release(...)),
     default => NULL,
   };
   if ($results === NULL) {

@@ -84,6 +84,15 @@ $check('gate change in a patch fails', $levels(check_release('1.3.1', $milestone
 $check('notes', release_notes($open), "Bug:\n- #3591566 Menu items resource 500s\n- #3591563 Fix 11.4 hasDefinition(NULL)\nOther:\n- #3350524 Document sparse fieldsets\nTask:\n- #3591567 Run phpunit concurrently\n");
 
 // Exit codes and the override.
+// Previous release tag.
+$check('previous tag is the highest release', previous_tag(['1.2.8', '1.3.0', '1.2.10']), '1.3.0');
+$check('previous tag skips prereleases', previous_tag(['1.3.0', '1.3.1rc1', '1.3.1-rc1', '8.x-1.9']), '1.3.0');
+$check('no previous tag', previous_tag(['1.3.0-beta1']), '');
+
+// API failures.
+$check('API failure is a fail result', results(fn() => throw new \RuntimeException('could not read the API')), [['fail', 'could not read the API']]);
+$check('API failure can be overridden', exit_code(results(fn() => throw new \RuntimeException('down')), 'API outage'), 3);
+
 $check('pass', exit_code([['ok', '']], ''), 0);
 $check('warn', exit_code([['warn', '']], ''), 3);
 $check('fail', exit_code([['warn', ''], ['fail', '']], ''), 1);
