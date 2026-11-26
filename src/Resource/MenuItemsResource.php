@@ -126,7 +126,11 @@ final class MenuItemsResource extends ResourceBase implements ContainerInjection
    * {@inheritdoc}
    */
   public function getRouteResourceTypes(Route $route, string $route_name): array {
-    $map_id = "route_resource_types.resource_type.$route_name";
+    // 1.2.8 and earlier cached ResourceType objects under
+    // "route_resource_types.resource_type.$route_name". A new ID keeps this
+    // code from reading those entries before jsonapi_menu_items_update_8002()
+    // clears them.
+    $map_id = "route_resource_types.identifiers.$route_name";
     $cached = $this->cacheBackend->get($map_id);
     if ($cached) {
       // Reconstruct ResourceType objects from lightweight cached identifiers.
